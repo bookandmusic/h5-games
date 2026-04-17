@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "console")]
 
 fn main() {
-    h5_games_lib::run()
+    h5_games::run()
 }

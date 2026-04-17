@@ -5,6 +5,10 @@ description = "A mobile games app"
 authors = ["you"]
 edition = "2021"
 
+[lib]
+crate-type = ["staticlib", "cdylib", "rlib"]
+name = "h5_games"
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
