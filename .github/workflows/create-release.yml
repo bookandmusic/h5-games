@@ -1,4 +1,4 @@
-name: Create Release Tag
+name: Create Release
 
 on:
   workflow_dispatch:
@@ -13,9 +13,17 @@ on:
           - minor
           - patch
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
+  # ============ 创建 Tag ============
   create-tag:
     runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.calc_version.outputs.new_tag }}
+      version: ${{ steps.calc_version.outputs.version }}
+      version_code: ${{ steps.calc_version.outputs.version_code }}
     permissions:
       contents: write
     steps:
@@ -60,7 +68,12 @@ jobs:
           fi
 
           new_tag="v${major}.${minor}.${patch}"
+          version="${major}.${minor}.${patch}"
+          version_code=$((major * 10000 + minor * 100 + patch))
+
           echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "version_code=$version_code" >> $GITHUB_OUTPUT
           echo "新版本: $new_tag (类型: $version_type)"
 
       - name: Create and push tag
@@ -79,5 +92,223 @@ jobs:
           echo "| 上一个版本 | ${{ steps.get_tag.outputs.latest_tag }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 新版本 | ${{ steps.calc_version.outputs.new_tag }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 版本类型 | ${{ inputs.version_type }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "构建 workflow 已自动触发，请查看 [Actions](../../actions) 页面。" >> $GITHUB_STEP_SUMMARY
+
+  # ============ Windows 构建 ============
+  build-windows:
+    needs: create-tag
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Update version in config files
+        run: |
+          $version = "${{ needs.create-tag.outputs.version }}"
+
+          # 更新 tauri.conf.json
+          $content = Get-Content "src-tauri/tauri.conf.json" | ConvertFrom-Json
+          $content.version = $version
+          $content | ConvertTo-Json -Depth 10 | Set-Content "src-tauri/tauri.conf.json"
+
+          # 更新 Cargo.toml
+          $cargoContent = Get-Content "src-tauri/Cargo.toml"
+          $cargoContent = $cargoContent -replace '^version = ".*"', "version = `"$version`""
+          Set-Content "src-tauri/Cargo.toml" $cargoContent
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ needs.create-tag.outputs.new_tag }}
+          releaseName: 'H5 Games ${{ needs.create-tag.outputs.new_tag }}'
+          releaseBody: 'See CHANGELOG for details.'
+          releaseDraft: true
+          prerelease: false
+          args: --target x86_64-pc-windows-msvc
+
+  # ============ macOS 构建 (Universal Binary) ============
+  build-macos:
+    needs: create-tag
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+
+      - name: Update version in config files
+        run: |
+          VERSION="${{ needs.create-tag.outputs.version }}"
+
+          # 更新 tauri.conf.json
+          sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+
+          # 更新 Cargo.toml
+          sed -i '' "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri app (Universal)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ needs.create-tag.outputs.new_tag }}
+          releaseName: 'H5 Games ${{ needs.create-tag.outputs.new_tag }}'
+          releaseBody: 'See CHANGELOG for details.'
+          releaseDraft: true
+          prerelease: false
+          args: --target universal-apple-darwin
+
+  # ============ Linux 构建 ============
+  build-linux:
+    needs: create-tag
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Update version in config files
+        run: |
+          VERSION="${{ needs.create-tag.outputs.version }}"
+
+          # 更新 tauri.conf.json
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+
+          # 更新 Cargo.toml
+          sed -i "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ needs.create-tag.outputs.new_tag }}
+          releaseName: 'H5 Games ${{ needs.create-tag.outputs.new_tag }}'
+          releaseBody: 'See CHANGELOG for details.'
+          releaseDraft: true
+          prerelease: false
+          args: --target x86_64-unknown-linux-gnu
+
+  # ============ Android 构建 ============
+  build-android:
+    needs: create-tag
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager "ndk;26.3.11579264"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Update version in config files
+        run: |
+          VERSION="${{ needs.create-tag.outputs.version }}"
+          VERSION_CODE="${{ needs.create-tag.outputs.version_code }}"
+
+          # 更新 tauri.conf.json
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+
+          # 更新 Cargo.toml
+          sed -i "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+
+          # 创建 tauri.properties 用于 Android 版本号
+          mkdir -p src-tauri/gen/android/app
+          echo "tauri.android.versionCode=$VERSION_CODE" > src-tauri/gen/android/app/tauri.properties
+          echo "tauri.android.versionName=$VERSION" >> src-tauri/gen/android/app/tauri.properties
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android APK
+        run: npm run tauri android build -- --apk
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-${{ needs.create-tag.outputs.new_tag }}
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+
+      - name: Add APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.create-tag.outputs.new_tag }}
+          files: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
