@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::Manager;
 
-const STORAGE_FILE = "game_states.json";
+const STORAGE_FILE: &str = "game_states.json";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct GameStates {
