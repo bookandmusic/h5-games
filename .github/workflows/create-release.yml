@@ -90,17 +90,17 @@ jobs:
             target: x86_64-pc-windows-msvc
             runner: windows-latest
             ext: exe
-            artifact_ext: exe,msi
+            artifact_ext: exe msi
           - platform: macos
             target: universal-apple-darwin
             runner: macos-latest
             ext: dmg
-            artifact_ext: dmg,app.tar.gz
+            artifact_ext: dmg app.tar.gz
           - platform: linux
             target: x86_64-unknown-linux-gnu
             runner: ubuntu-22.04
             ext: AppImage
-            artifact_ext: AppImage,deb
+            artifact_ext: AppImage deb
 
     runs-on: ${{ matrix.runner }}
     permissions:
@@ -130,8 +130,8 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ needs.create-tag.outputs.version }}"
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
-          sed -i "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          perl -pi -e "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          perl -pi -e "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
 
       - name: Install dependencies
         run: npm ci
@@ -235,8 +235,8 @@ jobs:
           VERSION="${{ needs.create-tag.outputs.version }}"
           VERSION_CODE="${{ needs.create-tag.outputs.version_code }}"
 
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
-          sed -i "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
+          perl -pi -e "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" src-tauri/tauri.conf.json
+          perl -pi -e "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" src-tauri/Cargo.toml
 
           mkdir -p src-tauri/gen/android/app
           echo "tauri.android.versionCode=$VERSION_CODE" > src-tauri/gen/android/app/tauri.properties
@@ -246,7 +246,7 @@ jobs:
         run: npm ci
 
       - name: Build Android APK
-        run: npm run tauri android build -- --apk --release
+        run: npm run tauri android build -- --apk
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/26.3.11579264
 
