@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "H5 Games",
+  "productName": "H5Games",
   "version": "0.1.0",
   "identifier": "com.h5games.app",
   "build": {
