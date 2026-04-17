@@ -1,0 +1,83 @@
+name: Create Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: '版本类型 (major=重构/大版本, minor=功能, patch=bug修复)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+jobs:
+  create-tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "latest_tag=$latest_tag" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: calc_version
+        run: |
+          latest_tag="${{ steps.get_tag.outputs.latest_tag }}"
+          version_type="${{ inputs.version_type }}"
+
+          # 解析版本号
+          version="${latest_tag#v}"
+          major=$(echo $version | cut -d. -f1)
+          minor=$(echo $version | cut -d. -f2)
+          patch=$(echo $version | cut -d. -f3)
+
+          # 处理可能的非数字情况
+          major=${major:-0}
+          minor=${minor:-0}
+          patch=${patch:-0}
+
+          # 根据类型递增
+          if [ "$version_type" = "major" ]; then
+            major=$((major + 1))
+            minor=0
+            patch=0
+          elif [ "$version_type" = "minor" ]; then
+            minor=$((minor + 1))
+            patch=0
+          else
+            patch=$((patch + 1))
+          fi
+
+          new_tag="v${major}.${minor}.${patch}"
+          echo "new_tag=$new_tag" >> $GITHUB_OUTPUT
+          echo "新版本: $new_tag (类型: $version_type)"
+
+      - name: Create and push tag
+        run: |
+          new_tag="${{ steps.calc_version.outputs.new_tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$new_tag" -m "Release $new_tag"
+          git push origin "$new_tag"
+
+      - name: Summary
+        run: |
+          echo "### ✅ Tag 创建成功" >> $GITHUB_STEP_SUMMARY
+          echo "| 项目 | 值 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| 上一个版本 | ${{ steps.get_tag.outputs.latest_tag }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 新版本 | ${{ steps.calc_version.outputs.new_tag }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 版本类型 | ${{ inputs.version_type }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "构建 workflow 已自动触发，请查看 [Actions](../../actions) 页面。" >> $GITHUB_STEP_SUMMARY

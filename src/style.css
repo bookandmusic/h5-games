@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+/* iOS HIG 设计系统 */
+:root {
+  /* iOS 系统颜色 */
+  --ios-primary: #7c3aed;
+  --ios-primary-light: #a78bfa;
+
+  /* iOS 系统背景层次 */
+  --ios-background: #f2f2f7; /* iOS grouped 背景灰 */
+  --ios-surface: #ffffff; /* iOS 卡片/表面白色 */
+  --ios-secondary-surface: #e5e5ea;
+
+  /* iOS 文字颜色 */
+  --ios-text-primary: #000000; /* iOS 主文字纯黑 */
+  --ios-text-secondary: #8e8e93; /* iOS secondary 文字 */
+  --ios-text-tertiary: #c7c7cc; /* iOS tertiary 文字 */
+
+  /* iOS 系统控件颜色 */
+  --ios-search-bg: #e5e5ea; /* iOS 搜索框背景 */
+  --ios-segment-bg: rgba(118, 118, 128, 0.12); /* iOS 分段控制器背景 */
+
+  /* iOS 导航栏背景 */
+  --ios-header-bg: rgba(242, 242, 247, 0.8);
+
+  /* iOS 圆角 */
+  --ios-radius-sm: 8px;
+  --ios-radius-md: 12px;
+  --ios-radius-lg: 16px;
+
+  /* iOS 动画 */
+  --ios-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ios-duration-fast: 150ms;
+  --ios-duration-normal: 250ms;
+}
+
+/* 全局样式 */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  background: var(--ios-background);
+  color: var(--ios-text-primary);
+  font-size: 17px;
+  line-height: 1.47;
+  overscroll-behavior: none;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+/* iOS 风格滚动条 */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* iOS 卡片基础样式 */
+.ios-card {
+  background: var(--ios-surface);
+  border-radius: var(--ios-radius-lg);
+  overflow: hidden;
+  transition: transform var(--ios-duration-fast) var(--ios-ease);
+}
+
+.ios-card:active {
+  transform: scale(0.97);
+}
+
+/* iOS 按钮样式 */
+.ios-button {
+  background: var(--ios-primary);
+  color: white;
+  padding: 12px 20px;
+  border-radius: var(--ios-radius-md);
+  font-size: 17px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition:
+    transform var(--ios-duration-fast) var(--ios-ease),
+    opacity var(--ios-duration-fast) var(--ios-ease);
+}
+
+.ios-button:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* iOS 文字按钮 */
+.ios-text-button {
+  background: transparent;
+  color: var(--ios-primary);
+  padding: 8px 12px;
+  font-size: 17px;
+  font-weight: 400;
+  border: none;
+  cursor: pointer;
+  transition: opacity var(--ios-duration-fast) var(--ios-ease);
+}
+
+.ios-text-button:active {
+  opacity: 0.5;
+}
+
+/* iOS 分隔线 */
+.ios-separator {
+  height: 0.5px;
+  background: #c6c6c8;
+  margin-left: 16px;
+}
+
+/* iOS 图标大小 */
+.ios-icon-sm {
+  width: 20px;
+  height: 20px;
+}
+.ios-icon-md {
+  width: 24px;
+  height: 24px;
+}
+.ios-icon-lg {
+  width: 28px;
+  height: 28px;
+}

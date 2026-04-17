@@ -1,0 +1,10 @@
+[
+  {
+    "id": "2048",
+    "name": "2048",
+    "category": "益智",
+    "description": "经典数字合成游戏，移动方块将相同数字合并，目标是达到2048",
+    "icon": "/assets/games/2048.svg",
+    "route": "/game/2048"
+  }
+]
