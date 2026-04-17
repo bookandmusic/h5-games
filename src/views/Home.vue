@@ -202,6 +202,7 @@ const currentCategoryTitle = computed(() => {
   background: var(--ios-header-bg);
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
+  padding-top: env(safe-area-inset-top);
 }
 
 .ios-header-content {
@@ -409,7 +410,7 @@ const currentCategoryTitle = computed(() => {
 }
 
 .ios-safe-area-bottom {
-  height: 34px;
+  height: env(safe-area-inset-bottom, 34px);
 }
 
 /* iOS Action Sheet */

@@ -99,6 +99,7 @@ if (!GameComponent.value && gameId.value) {
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   padding: 12px 16px;
+  padding-top: calc(env(safe-area-inset-top) + 12px);
   display: flex;
   align-items: center;
 }
