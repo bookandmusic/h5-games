@@ -1,449 +1,382 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
-/**
- * 2048 游戏核心逻辑测试
- *
- * 测试独立于 Vue 组件，直接测试游戏逻辑函数
- */
+import {
+  SIZE,
+  canMove,
+  createEmptyGrid,
+  getEmptyCells,
+  getMaxCellValue,
+  getNewCellValue,
+  moveGrid,
+  moveRowLeft,
+  rotateGrid,
+  spawnRandomCell,
+} from './gameLogic'
+import type { Difficulty, GameCell, MoveDirection } from './types'
 
-const SIZE = 4
-
-type CellValue = number
-
-interface Cell {
-  value: CellValue
-  id: number
+const createIdFactory = () => {
+  let nextId = 0
+  return () => nextId++
 }
 
-// 创建空网格
-function createEmptyGrid(): Cell[][] {
-  let idCounter = 0
-  return Array(SIZE)
-    .fill(null)
-    .map(() =>
-      Array(SIZE)
-        .fill(null)
-        .map(() => ({ value: 0, id: idCounter++ }))
-    )
+const rowFromValues = (values: number[]): GameCell[] => {
+  const createId = createIdFactory()
+  return values.map((value) => ({ value, id: createId() }))
 }
 
-// 向左移动一行（核心算法）
-function moveRowLeft(row: Cell[]): { newRow: Cell[]; moved: boolean } {
-  const newRow: Cell[] = []
-  let moved = false
-  let lastValue = 0
-  let lastId = -1
-  let idCounter = 0
-
-  for (const cell of row) {
-    if (cell.value === 0) continue
-    if (cell.value === lastValue && lastValue !== 0) {
-      newRow[lastId] = { value: lastValue * 2, id: idCounter++ }
-      lastValue = 0
-      lastId = -1
-      moved = true
-    } else {
-      newRow.push({ value: cell.value, id: idCounter++ })
-      lastValue = cell.value
-      lastId = newRow.length - 1
-      if (newRow.length - 1 !== row.indexOf(cell)) moved = true
-    }
-  }
-
-  while (newRow.length < SIZE) {
-    newRow.push({ value: 0, id: idCounter++ })
-  }
-
-  return { newRow, moved }
+const gridFromValues = (values: number[][]): GameCell[][] => {
+  const createId = createIdFactory()
+  return values.map((row) => row.map((value) => ({ value, id: createId() })))
 }
 
-// 旋转网格
-function rotateGrid(grid: Cell[][]): Cell[][] {
-  const newGrid: Cell[][] = []
-  for (let c = 0; c < SIZE; c++) {
-    const newRow: Cell[] = []
-    for (let r = SIZE - 1; r >= 0; r--) newRow.push(grid[r][c])
-    newGrid.push(newRow)
-  }
-  return newGrid
-}
+const toValues = (grid: GameCell[][]): number[][] =>
+  grid.map((row) => row.map((cell) => cell.value))
 
-// 检查是否有空格
-function hasEmptyCells(grid: Cell[][]): boolean {
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (grid[r][c].value === 0) return true
-    }
-  }
-  return false
-}
+describe('2048 game logic', () => {
+  let createId: () => number
 
-// 检查是否可以继续移动
-function canMove(grid: Cell[][]): boolean {
-  if (hasEmptyCells(grid)) return true
-  // 检查相邻格子是否有相同值
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      const v = grid[r][c].value
-      if (c < SIZE - 1 && grid[r][c + 1].value === v) return true
-      if (r < SIZE - 1 && grid[r + 1][c].value === v) return true
-    }
-  }
-  return false
-}
+  beforeEach(() => {
+    createId = createIdFactory()
+  })
 
-// 计算格子中的最大值作为分数
-function calculateMaxScore(grid: Cell[][]): number {
-  let maxVal = 0
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      const v = grid[r][c].value
-      if (v > maxVal) maxVal = v
-    }
-  }
-  return maxVal
-}
+  it('creates an empty 4x4 grid with 16 empty cells', () => {
+    const grid = createEmptyGrid(createId)
 
-// 根据当前分数获取新格子值（难度递增逻辑）
-function getNewCellValue(currentScore: number, randomValue: number): number {
-  if (currentScore >= 2048) {
-    // 2048+: 2(60%), 4(30%), 8(10%)
-    if (randomValue < 0.6) return 2
-    if (randomValue < 0.9) return 4
-    return 8
-  } else if (currentScore >= 1024) {
-    // 1024-2047: 2(70%), 4(25%), 8(5%)
-    if (randomValue < 0.7) return 2
-    if (randomValue < 0.95) return 4
-    return 8
-  } else if (currentScore >= 512) {
-    // 512-1023: 2(75%), 4(20%), 8(5%)
-    if (randomValue < 0.75) return 2
-    if (randomValue < 0.95) return 4
-    return 8
-  } else if (currentScore >= 256) {
-    // 256-511: 2(80%), 4(20%)
-    return randomValue < 0.8 ? 2 : 4
-  } else if (currentScore >= 128) {
-    // 128-255: 2(85%), 4(15%)
-    return randomValue < 0.85 ? 2 : 4
-  } else {
-    // 0-127: 2(90%), 4(10%) - 初始难度
-    return randomValue < 0.9 ? 2 : 4
-  }
-}
+    expect(grid).toHaveLength(SIZE)
+    expect(grid.every((row) => row.length === SIZE)).toBe(true)
+    expect(toValues(grid)).toEqual([
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ])
+    expect(getEmptyCells(grid)).toHaveLength(16)
+  })
 
-describe('2048 游戏核心逻辑', () => {
+  it('spawns a tile at the selected empty position with the selected difficulty value', () => {
+    const grid = gridFromValues([
+      [2, 0, 4, 0],
+      [0, 8, 16, 32],
+      [64, 128, 256, 512],
+      [1024, 2048, 4096, 8192],
+    ])
+
+    const nextGrid = spawnRandomCell(grid, 'hard', createId, 0.5, 0.95)
+
+    expect(toValues(nextGrid)).toEqual([
+      [2, 0, 4, 8],
+      [0, 8, 16, 32],
+      [64, 128, 256, 512],
+      [1024, 2048, 4096, 8192],
+    ])
+  })
+
   describe('moveRowLeft', () => {
-    it('空行应保持不变', () => {
-      const row = createEmptyGrid()[0]
-      const result = moveRowLeft(row)
-      expect(result.moved).toBe(false)
-    })
+    it.each([
+      {
+        name: 'keeps an empty row unchanged',
+        input: [0, 0, 0, 0],
+        output: [0, 0, 0, 0],
+        moved: false,
+        reached2048: false,
+      },
+      {
+        name: 'slides a single tile left',
+        input: [0, 0, 0, 2],
+        output: [2, 0, 0, 0],
+        moved: true,
+        reached2048: false,
+      },
+      {
+        name: 'merges a pair',
+        input: [2, 2, 0, 0],
+        output: [4, 0, 0, 0],
+        moved: true,
+        reached2048: false,
+      },
+      {
+        name: 'merges only the first pair in a triple',
+        input: [2, 2, 2, 0],
+        output: [4, 2, 0, 0],
+        moved: true,
+        reached2048: false,
+      },
+      {
+        name: 'merges four equal tiles into two pairs',
+        input: [2, 2, 2, 2],
+        output: [4, 4, 0, 0],
+        moved: true,
+        reached2048: false,
+      },
+      {
+        name: 'does not merge different values',
+        input: [2, 4, 2, 4],
+        output: [2, 4, 2, 4],
+        moved: false,
+        reached2048: false,
+      },
+      {
+        name: 'merges across gaps',
+        input: [2, 0, 2, 0],
+        output: [4, 0, 0, 0],
+        moved: true,
+        reached2048: false,
+      },
+      {
+        name: 'reports reaching 2048 on merge',
+        input: [1024, 1024, 0, 0],
+        output: [2048, 0, 0, 0],
+        moved: true,
+        reached2048: true,
+      },
+    ])('$name', ({ input, output, moved, reached2048 }) => {
+      const result = moveRowLeft(rowFromValues(input), createId)
 
-    it('单个数字在首位应保持位置', () => {
-      const row = [
-        { value: 2, id: 0 },
-        { value: 0, id: 1 },
-        { value: 0, id: 2 },
-        { value: 0, id: 3 },
-      ]
-      const result = moveRowLeft(row)
-      expect(result.newRow[0].value).toBe(2)
-      expect(result.newRow[1].value).toBe(0)
-      expect(result.moved).toBe(false) // 数字已经在首位，未发生移动
-    })
-
-    it('单个数字应移动到左边', () => {
-      const row = [
-        { value: 0, id: 0 },
-        { value: 0, id: 1 },
-        { value: 0, id: 2 },
-        { value: 2, id: 3 },
-      ]
-      const result = moveRowLeft(row)
-      expect(result.newRow[0].value).toBe(2)
-      expect(result.newRow[1].value).toBe(0)
-      expect(result.moved).toBe(true) // 数字从末尾移动到首位
-    })
-
-    it('相同数字应合并', () => {
-      const row = [
-        { value: 2, id: 0 },
-        { value: 2, id: 1 },
-        { value: 0, id: 2 },
-        { value: 0, id: 3 },
-      ]
-      const result = moveRowLeft(row)
-      expect(result.newRow[0].value).toBe(4)
-      expect(result.newRow[1].value).toBe(0)
-      expect(result.moved).toBe(true)
-    })
-
-    it('三个相同数字应合并前两个', () => {
-      const row = [
-        { value: 2, id: 0 },
-        { value: 2, id: 1 },
-        { value: 2, id: 2 },
-        { value: 0, id: 3 },
-      ]
-      const result = moveRowLeft(row)
-      expect(result.newRow[0].value).toBe(4)
-      expect(result.newRow[1].value).toBe(2)
-    })
-
-    it('四个相同数字应合并成两个', () => {
-      const row = [
-        { value: 2, id: 0 },
-        { value: 2, id: 1 },
-        { value: 2, id: 2 },
-        { value: 2, id: 3 },
-      ]
-      const result = moveRowLeft(row)
-      expect(result.newRow[0].value).toBe(4)
-      expect(result.newRow[1].value).toBe(4)
-    })
-
-    it('不同数字不应合并', () => {
-      const row = [
-        { value: 2, id: 0 },
-        { value: 4, id: 1 },
-        { value: 0, id: 2 },
-        { value: 0, id: 3 },
-      ]
-      const result = moveRowLeft(row)
-      expect(result.newRow[0].value).toBe(2)
-      expect(result.newRow[1].value).toBe(4)
-    })
-
-    it('间隔相同数字应合并', () => {
-      const row = [
-        { value: 2, id: 0 },
-        { value: 0, id: 1 },
-        { value: 2, id: 2 },
-        { value: 0, id: 3 },
-      ]
-      const result = moveRowLeft(row)
-      expect(result.newRow[0].value).toBe(4)
+      expect(result.moved).toBe(moved)
+      expect(result.reached2048).toBe(reached2048)
+      expect(result.row.map((cell) => cell.value)).toEqual(output)
     })
   })
 
   describe('rotateGrid', () => {
-    it('旋转4次应回到原始状态', () => {
-      const grid = createEmptyGrid()
-      grid[0][0].value = 2
-      grid[0][3].value = 4
+    it.each([
+      {
+        name: 'rotates once clockwise',
+        times: 1,
+        output: [
+          [13, 9, 5, 1],
+          [14, 10, 6, 2],
+          [15, 11, 7, 3],
+          [16, 12, 8, 4],
+        ],
+      },
+      {
+        name: 'rotates twice',
+        times: 2,
+        output: [
+          [16, 15, 14, 13],
+          [12, 11, 10, 9],
+          [8, 7, 6, 5],
+          [4, 3, 2, 1],
+        ],
+      },
+      {
+        name: 'returns to the original grid after four rotations',
+        times: 4,
+        output: [
+          [1, 2, 3, 4],
+          [5, 6, 7, 8],
+          [9, 10, 11, 12],
+          [13, 14, 15, 16],
+        ],
+      },
+    ])('$name', ({ times, output }) => {
+      const grid = gridFromValues([
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 16],
+      ])
 
-      let rotated = grid
-      for (let i = 0; i < 4; i++) {
-        rotated = rotateGrid(rotated)
+      expect(toValues(rotateGrid(grid, times))).toEqual(output)
+    })
+  })
+
+  describe('moveGrid', () => {
+    it.each<{
+      name: string
+      direction: MoveDirection
+      input: number[][]
+      output: number[][]
+      moved: boolean
+    }>([
+      {
+        name: 'moves left',
+        direction: 'left',
+        input: [
+          [0, 2, 0, 2],
+          [2, 0, 2, 2],
+          [0, 0, 0, 0],
+          [4, 4, 8, 8],
+        ],
+        output: [
+          [4, 0, 0, 0],
+          [4, 2, 0, 0],
+          [0, 0, 0, 0],
+          [8, 16, 0, 0],
+        ],
+        moved: true,
+      },
+      {
+        name: 'moves right',
+        direction: 'right',
+        input: [
+          [2, 0, 0, 2],
+          [2, 2, 0, 2],
+          [0, 0, 0, 0],
+          [4, 4, 8, 8],
+        ],
+        output: [
+          [0, 0, 0, 4],
+          [0, 0, 2, 4],
+          [0, 0, 0, 0],
+          [0, 0, 8, 16],
+        ],
+        moved: true,
+      },
+      {
+        name: 'moves up',
+        direction: 'up',
+        input: [
+          [2, 0, 2, 0],
+          [2, 0, 2, 0],
+          [0, 0, 2, 0],
+          [0, 0, 0, 0],
+        ],
+        output: [
+          [4, 0, 4, 0],
+          [0, 0, 2, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ],
+        moved: true,
+      },
+      {
+        name: 'moves down',
+        direction: 'down',
+        input: [
+          [2, 0, 2, 0],
+          [2, 0, 2, 0],
+          [0, 0, 2, 0],
+          [0, 0, 0, 0],
+        ],
+        output: [
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 2, 0],
+          [4, 0, 4, 0],
+        ],
+        moved: true,
+      },
+      {
+        name: 'reports no movement when the grid is already settled',
+        direction: 'left',
+        input: [
+          [2, 4, 8, 16],
+          [32, 64, 128, 256],
+          [512, 1024, 2, 4],
+          [8, 16, 32, 64],
+        ],
+        output: [
+          [2, 4, 8, 16],
+          [32, 64, 128, 256],
+          [512, 1024, 2, 4],
+          [8, 16, 32, 64],
+        ],
+        moved: false,
+      },
+    ])('$name', ({ direction, input, output, moved }) => {
+      const result = moveGrid(gridFromValues(input), direction, createId)
+
+      expect(result.moved).toBe(moved)
+      expect(toValues(result.grid)).toEqual(output)
+    })
+
+    it('reports reaching 2048 when moving the whole grid', () => {
+      const result = moveGrid(
+        gridFromValues([
+          [1024, 1024, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+        ]),
+        'left',
+        createId
+      )
+
+      expect(result.reached2048).toBe(true)
+      expect(toValues(result.grid)[0]).toEqual([2048, 0, 0, 0])
+    })
+  })
+
+  describe('canMove and scoring', () => {
+    it.each([
+      {
+        name: 'returns true when empty cells remain',
+        input: [
+          [2, 4, 8, 16],
+          [32, 64, 128, 0],
+          [512, 1024, 2, 4],
+          [8, 16, 32, 64],
+        ],
+        expected: true,
+      },
+      {
+        name: 'returns true when a horizontal merge is available',
+        input: [
+          [2, 2, 8, 16],
+          [32, 64, 128, 256],
+          [512, 1024, 2, 4],
+          [8, 16, 32, 64],
+        ],
+        expected: true,
+      },
+      {
+        name: 'returns true when a vertical merge is available',
+        input: [
+          [2, 4, 8, 16],
+          [2, 64, 128, 256],
+          [512, 1024, 2, 4],
+          [8, 16, 32, 64],
+        ],
+        expected: true,
+      },
+      {
+        name: 'returns false when the board is full and no merges remain',
+        input: [
+          [2, 4, 2, 4],
+          [4, 2, 4, 2],
+          [2, 4, 2, 4],
+          [4, 2, 4, 2],
+        ],
+        expected: false,
+      },
+    ])('$name', ({ input, expected }) => {
+      expect(canMove(gridFromValues(input))).toBe(expected)
+    })
+
+    it('returns the largest tile as the score', () => {
+      const grid = gridFromValues([
+        [2, 4, 8, 16],
+        [32, 64, 128, 256],
+        [512, 1024, 2, 4],
+        [8, 16, 32, 64],
+      ])
+
+      expect(getMaxCellValue(grid)).toBe(1024)
+    })
+  })
+
+  describe('getNewCellValue', () => {
+    it.each<{
+      difficulty: Difficulty
+      randomValue: number
+      expected: number
+    }>([
+      { difficulty: 'easy', randomValue: 0.0, expected: 2 },
+      { difficulty: 'easy', randomValue: 0.949, expected: 2 },
+      { difficulty: 'easy', randomValue: 0.95, expected: 4 },
+      { difficulty: 'medium', randomValue: 0.899, expected: 2 },
+      { difficulty: 'medium', randomValue: 0.9, expected: 4 },
+      { difficulty: 'hard', randomValue: 0.699, expected: 2 },
+      { difficulty: 'hard', randomValue: 0.7, expected: 4 },
+      { difficulty: 'hard', randomValue: 0.949, expected: 4 },
+      { difficulty: 'hard', randomValue: 0.95, expected: 8 },
+    ])(
+      'returns $expected for $difficulty at $randomValue',
+      ({ difficulty, randomValue, expected }) => {
+        expect(getNewCellValue(difficulty, randomValue)).toBe(expected)
       }
-
-      expect(rotated[0][0].value).toBe(2)
-      expect(rotated[0][3].value).toBe(4)
-    })
-
-    it('旋转应正确转换坐标', () => {
-      const grid = createEmptyGrid()
-      grid[0][3].value = 8 // 顶部右侧
-
-      const rotated = rotateGrid(grid)
-      // 旋转后：顶部右侧变成底部右侧
-      expect(rotated[3][3].value).toBe(8)
-    })
-  })
-
-  describe('hasEmptyCells', () => {
-    it('空网格应有空格', () => {
-      const grid = createEmptyGrid()
-      expect(hasEmptyCells(grid)).toBe(true)
-    })
-
-    it('满网格应无空格', () => {
-      const grid = createEmptyGrid()
-      for (let r = 0; r < SIZE; r++) {
-        for (let c = 0; c < SIZE; c++) {
-          grid[r][c].value = 2
-        }
-      }
-      expect(hasEmptyCells(grid)).toBe(false)
-    })
-  })
-
-  describe('canMove', () => {
-    it('有空格时应可移动', () => {
-      const grid = createEmptyGrid()
-      expect(canMove(grid)).toBe(true)
-    })
-
-    it('相邻有相同值时应可移动', () => {
-      const grid = createEmptyGrid()
-      grid[0][0].value = 2
-      grid[0][1].value = 2
-      expect(canMove(grid)).toBe(true)
-    })
-
-    it('满网格无相邻相同值时应不可移动', () => {
-      const grid = createEmptyGrid()
-      // 按蛇形填充不同值，确保无相邻相同
-      const values = [2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2]
-      let idx = 0
-      for (let r = 0; r < SIZE; r++) {
-        for (let c = 0; c < SIZE; c++) {
-          grid[r][c].value = values[idx++]
-        }
-      }
-      expect(canMove(grid)).toBe(false)
-    })
-  })
-
-  describe('calculateMaxScore', () => {
-    it('空网格分数应为0', () => {
-      const grid = createEmptyGrid()
-      expect(calculateMaxScore(grid)).toBe(0)
-    })
-
-    it('应返回格子中的最大值', () => {
-      const grid = createEmptyGrid()
-      grid[0][0].value = 2
-      grid[0][1].value = 16
-      grid[1][0].value = 4
-      grid[2][2].value = 8
-      expect(calculateMaxScore(grid)).toBe(16)
-    })
-
-    it('达到2048时分数应为2048', () => {
-      const grid = createEmptyGrid()
-      grid[0][0].value = 2048
-      grid[0][1].value = 1024
-      grid[1][0].value = 512
-      expect(calculateMaxScore(grid)).toBe(2048)
-    })
-
-    it('多个相同最大值应正确计算', () => {
-      const grid = createEmptyGrid()
-      grid[0][0].value = 128
-      grid[0][1].value = 128
-      grid[1][0].value = 128
-      expect(calculateMaxScore(grid)).toBe(128)
-    })
-  })
-
-  describe('getNewCellValue 难度递增', () => {
-    describe('初始难度 (0-127)', () => {
-      it('随机值 < 0.9 应返回 2', () => {
-        expect(getNewCellValue(0, 0.0)).toBe(2)
-        expect(getNewCellValue(64, 0.5)).toBe(2)
-        expect(getNewCellValue(127, 0.89)).toBe(2)
-      })
-
-      it('随机值 >= 0.9 应返回 4', () => {
-        expect(getNewCellValue(0, 0.9)).toBe(4)
-        expect(getNewCellValue(64, 0.95)).toBe(4)
-        expect(getNewCellValue(127, 1.0)).toBe(4)
-      })
-    })
-
-    describe('难度1 (128-255)', () => {
-      it('随机值 < 0.85 应返回 2', () => {
-        expect(getNewCellValue(128, 0.0)).toBe(2)
-        expect(getNewCellValue(200, 0.84)).toBe(2)
-      })
-
-      it('随机值 >= 0.85 应返回 4', () => {
-        expect(getNewCellValue(128, 0.85)).toBe(4)
-        expect(getNewCellValue(255, 1.0)).toBe(4)
-      })
-    })
-
-    describe('难度2 (256-511)', () => {
-      it('随机值 < 0.8 应返回 2', () => {
-        expect(getNewCellValue(256, 0.0)).toBe(2)
-        expect(getNewCellValue(400, 0.79)).toBe(2)
-      })
-
-      it('随机值 >= 0.8 应返回 4', () => {
-        expect(getNewCellValue(256, 0.8)).toBe(4)
-        expect(getNewCellValue(511, 1.0)).toBe(4)
-      })
-    })
-
-    describe('难度3 (512-1023) - 开始出现8', () => {
-      it('随机值 < 0.75 应返回 2', () => {
-        expect(getNewCellValue(512, 0.0)).toBe(2)
-        expect(getNewCellValue(800, 0.74)).toBe(2)
-      })
-
-      it('随机值 0.75-0.95 应返回 4', () => {
-        expect(getNewCellValue(512, 0.75)).toBe(4)
-        expect(getNewCellValue(800, 0.94)).toBe(4)
-      })
-
-      it('随机值 >= 0.95 应返回 8', () => {
-        expect(getNewCellValue(512, 0.95)).toBe(8)
-        expect(getNewCellValue(1023, 1.0)).toBe(8)
-      })
-    })
-
-    describe('难度4 (1024-2047)', () => {
-      it('随机值 < 0.7 应返回 2', () => {
-        expect(getNewCellValue(1024, 0.0)).toBe(2)
-        expect(getNewCellValue(1500, 0.69)).toBe(2)
-      })
-
-      it('随机值 0.7-0.95 应返回 4', () => {
-        expect(getNewCellValue(1024, 0.7)).toBe(4)
-        expect(getNewCellValue(1500, 0.94)).toBe(4)
-      })
-
-      it('随机值 >= 0.95 应返回 8', () => {
-        expect(getNewCellValue(1024, 0.95)).toBe(8)
-        expect(getNewCellValue(2047, 1.0)).toBe(8)
-      })
-    })
-
-    describe('最高难度 (2048+)', () => {
-      it('随机值 < 0.6 应返回 2', () => {
-        expect(getNewCellValue(2048, 0.0)).toBe(2)
-        expect(getNewCellValue(4096, 0.59)).toBe(2)
-      })
-
-      it('随机值 0.6-0.9 应返回 4', () => {
-        expect(getNewCellValue(2048, 0.6)).toBe(4)
-        expect(getNewCellValue(4096, 0.89)).toBe(4)
-      })
-
-      it('随机值 >= 0.9 应返回 8', () => {
-        expect(getNewCellValue(2048, 0.9)).toBe(8)
-        expect(getNewCellValue(4096, 1.0)).toBe(8)
-      })
-    })
-
-    describe('边界值测试', () => {
-      it('分数边界 127/128 应切换难度', () => {
-        // 127 属于初始难度
-        expect(getNewCellValue(127, 0.89)).toBe(2)
-        expect(getNewCellValue(127, 0.9)).toBe(4)
-        // 128 属于难度1
-        expect(getNewCellValue(128, 0.84)).toBe(2)
-        expect(getNewCellValue(128, 0.85)).toBe(4)
-      })
-
-      it('分数边界 255/256 应切换难度', () => {
-        // 255 属于难度1
-        expect(getNewCellValue(255, 0.84)).toBe(2)
-        expect(getNewCellValue(255, 0.85)).toBe(4)
-        // 256 属于难度2
-        expect(getNewCellValue(256, 0.79)).toBe(2)
-        expect(getNewCellValue(256, 0.8)).toBe(4)
-      })
-
-      it('分数边界 511/512 应切换难度（开始出现8）', () => {
-        // 511 属于难度2（无8）
-        expect(getNewCellValue(511, 0.99)).toBe(4)
-        // 512 属于难度3（有8）
-        expect(getNewCellValue(512, 0.95)).toBe(8)
-      })
-    })
+    )
   })
 })

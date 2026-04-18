@@ -1,72 +1,70 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import { gameStorage } from '../../stores/gameStorage'
+import { canMove, createEmptyGrid, getMaxCellValue, moveGrid, spawnRandomCell } from './gameLogic'
+import { settingsStore } from './settingsStore'
+import { getTheme } from './themes'
+import type { GameCell, GameState, GameStatus, GameTheme, MoveDirection, StoredCell } from './types'
 
-type CellValue = number
-
-interface Cell {
-  value: CellValue
-  id: number
-}
-
-// 存储用的简化 Cell 结构（不含 id）
-interface StoredCell {
-  value: CellValue
-}
-
-interface GameState {
-  grid: StoredCell[][]
-  score: number
-  bestScore: number
-  gameStatus: 'playing' | 'won' | 'lost'
-}
-
-const SIZE = 4
 const GAME_ID = '2048'
 let cellIdCounter = 0
+const preloadedIconSources = new Set<string>()
 
-const grid = ref<Cell[][]>([])
+const router = useRouter()
+
+const grid = ref<GameCell[][]>([])
 const score = ref(0)
 const bestScore = ref(0)
-const gameStatus = ref<'playing' | 'won' | 'lost'>('playing')
+const gameStatus = ref<GameStatus>('playing')
+const settingsLoaded = ref(false)
 
-// iOS 柔和配色
-const cellColors: Record<number, { bg: string; text: string }> = {
-  0: { bg: 'bg-gray-200', text: 'text-gray-300' },
-  2: { bg: 'bg-amber-100', text: 'text-amber-800' },
-  4: { bg: 'bg-amber-200', text: 'text-amber-900' },
-  8: { bg: 'bg-orange-300', text: 'text-white' },
-  16: { bg: 'bg-orange-400', text: 'text-white' },
-  32: { bg: 'bg-red-400', text: 'text-white' },
-  64: { bg: 'bg-red-500', text: 'text-white' },
-  128: { bg: 'bg-yellow-400', text: 'text-white' },
-  256: { bg: 'bg-yellow-500', text: 'text-white' },
-  512: { bg: 'bg-purple-400', text: 'text-white' },
-  1024: { bg: 'bg-purple-500', text: 'text-white' },
-  2048: { bg: 'bg-gradient-to-br from-amber-400 to-orange-500', text: 'text-white' },
+const theme = computed(() => getTheme(settingsStore.theme))
+const difficulty = computed(() => settingsStore.difficulty)
+const nextCellId = () => cellIdCounter++
+
+const getCellTheme = (value: number) => theme.value.cellThemes[value] || theme.value.cellThemes[0]
+
+const getIconSrc = (value: number): string | undefined => {
+  if (!theme.value.useIcons || !theme.value.iconMap) return undefined
+  return theme.value.iconMap[value]
 }
 
-// 从存储恢复游戏状态
+const preloadThemeIcons = (themeToLoad: GameTheme) => {
+  if (!themeToLoad.useIcons || !themeToLoad.iconMap || typeof window === 'undefined') return
+
+  Object.values(themeToLoad.iconMap).forEach((src) => {
+    if (preloadedIconSources.has(src)) return
+    preloadedIconSources.add(src)
+
+    const image = new window.Image()
+    image.decoding = 'async'
+    image.loading = 'eager'
+    image.src = src
+  })
+}
+
 const restoreFromStorage = async () => {
+  await settingsStore.load()
+  settingsLoaded.value = true
+  preloadThemeIcons(theme.value)
+
   const state = await gameStorage.loadGameState(GAME_ID)
   if (state) {
     const savedState = state as GameState
-    // 恢复 grid，重新生成 id
-    grid.value = savedState.grid.map((row) =>
-      row.map((cell) => ({ value: cell.value, id: cellIdCounter++ }))
+    grid.value = savedState.grid.map((row: StoredCell[]) =>
+      row.map((cell: StoredCell) => ({ value: cell.value, id: nextCellId() }))
     )
     score.value = savedState.score
     bestScore.value = savedState.bestScore
     gameStatus.value = savedState.gameStatus
   } else {
-    initGrid()
+    await initGrid()
   }
 }
 
-// 保存游戏状态
 const saveToStorage = async () => {
-  // 转换 grid 为存储格式（不含 id）
   const storedGrid: StoredCell[][] = grid.value.map((row) =>
     row.map((cell) => ({ value: cell.value }))
   )
@@ -79,161 +77,49 @@ const saveToStorage = async () => {
   await gameStorage.saveGameState(GAME_ID, state)
 }
 
+const addRandomCell = () => {
+  grid.value = spawnRandomCell(grid.value, difficulty.value, nextCellId)
+}
+
+const updateScore = () => {
+  score.value = getMaxCellValue(grid.value)
+  if (score.value > bestScore.value) bestScore.value = score.value
+}
+
+const checkLose = () => {
+  if (!canMove(grid.value)) gameStatus.value = 'lost'
+}
+
 const initGrid = async () => {
-  grid.value = Array(SIZE)
-    .fill(null)
-    .map(() =>
-      Array(SIZE)
-        .fill(null)
-        .map(() => ({ value: 0, id: cellIdCounter++ }))
-    )
+  grid.value = createEmptyGrid(nextCellId)
   addRandomCell()
   addRandomCell()
   updateScore()
   gameStatus.value = 'playing'
-  // 清除旧存储，保存新状态
   await saveToStorage()
 }
 
-const getEmptyCells = () => {
-  const empty: { row: number; col: number }[] = []
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (grid.value[r][c].value === 0) empty.push({ row: r, col: c })
-    }
-  }
-  return empty
-}
-
-const addRandomCell = () => {
-  const empty = getEmptyCells()
-  if (empty.length === 0) return
-  const pos = empty[Math.floor(Math.random() * empty.length)]
-
-  // 根据当前分数计算难度
-  const getNewCellValue = () => {
-    const currentScore = score.value
-    // 分数越高，出现大数字的概率越大
-    if (currentScore >= 2048) {
-      // 2048+: 2(60%), 4(30%), 8(10%)
-      const rand = Math.random()
-      if (rand < 0.6) return 2
-      if (rand < 0.9) return 4
-      return 8
-    } else if (currentScore >= 1024) {
-      // 1024-2047: 2(70%), 4(25%), 8(5%)
-      const rand = Math.random()
-      if (rand < 0.7) return 2
-      if (rand < 0.95) return 4
-      return 8
-    } else if (currentScore >= 512) {
-      // 512-1023: 2(75%), 4(20%), 8(5%)
-      const rand = Math.random()
-      if (rand < 0.75) return 2
-      if (rand < 0.95) return 4
-      return 8
-    } else if (currentScore >= 256) {
-      // 256-511: 2(80%), 4(20%)
-      return Math.random() < 0.8 ? 2 : 4
-    } else if (currentScore >= 128) {
-      // 128-255: 2(85%), 4(15%)
-      return Math.random() < 0.85 ? 2 : 4
-    } else {
-      // 0-127: 2(90%), 4(10%) - 初始难度
-      return Math.random() < 0.9 ? 2 : 4
-    }
-  }
-
-  grid.value[pos.row][pos.col] = { value: getNewCellValue(), id: cellIdCounter++ }
-}
-
-const moveLeft = () => {
-  let moved = false
-  for (let r = 0; r < SIZE; r++) {
-    const row = grid.value[r]
-    const newRow: Cell[] = []
-    let lastValue = 0,
-      lastId = -1
-    for (let c = 0; c < SIZE; c++) {
-      const cell = row[c]
-      if (cell.value === 0) continue
-      if (cell.value === lastValue && lastValue !== 0) {
-        newRow[lastId] = { value: lastValue * 2, id: cellIdCounter++ }
-        if (newRow[lastId].value === 2048) gameStatus.value = 'won'
-        lastValue = 0
-        lastId = -1
-        moved = true
-      } else {
-        newRow.push({ value: cell.value, id: cell.id })
-        lastValue = cell.value
-        lastId = newRow.length - 1
-        // 检查格子位置是否发生变化
-        if (newRow.length - 1 !== c) moved = true
-      }
-    }
-    while (newRow.length < SIZE) {
-      newRow.push({ value: 0, id: cellIdCounter++ })
-    }
-    grid.value[r] = newRow
-  }
-  return moved
-}
-
-const rotateGrid = (times: number) => {
-  for (let t = 0; t < times; t++) {
-    const newGrid: Cell[][] = []
-    for (let c = 0; c < SIZE; c++) {
-      const newRow: Cell[] = []
-      for (let r = SIZE - 1; r >= 0; r--) newRow.push(grid.value[r][c])
-      newGrid.push(newRow)
-    }
-    grid.value = newGrid
-  }
-}
-
-const move = (dir: 'up' | 'down' | 'left' | 'right') => {
+const move = (dir: MoveDirection) => {
   if (gameStatus.value !== 'playing') return false
-  const rot = { left: 0, down: 1, right: 2, up: 3 }
-  rotateGrid(rot[dir])
-  const moved = moveLeft()
-  rotateGrid((4 - rot[dir]) % 4)
-  if (moved) {
-    addRandomCell()
-    updateScore()
+
+  const result = moveGrid(grid.value, dir, nextCellId)
+  if (!result.moved) return false
+
+  grid.value = spawnRandomCell(result.grid, difficulty.value, nextCellId)
+  updateScore()
+
+  if (result.reached2048) {
+    gameStatus.value = 'won'
+  } else {
     checkLose()
-    // 每次移动后保存
-    saveToStorage()
   }
-  return moved
-}
 
-const checkLose = () => {
-  if (getEmptyCells().length > 0) return
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      const v = grid.value[r][c].value
-      if (c < SIZE - 1 && grid.value[r][c + 1].value === v) return
-      if (r < SIZE - 1 && grid.value[r + 1][c].value === v) return
-    }
-  }
-  gameStatus.value = 'lost'
-}
-
-// 计算当前最大数字作为分数
-const updateScore = () => {
-  let maxVal = 0
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      const v = grid.value[r][c].value
-      if (v > maxVal) maxVal = v
-    }
-  }
-  score.value = maxVal
-  if (score.value > bestScore.value) bestScore.value = score.value
+  void saveToStorage()
+  return true
 }
 
 const handleKey = (e: KeyboardEvent) => {
-  const map: Record<string, 'up' | 'down' | 'left' | 'right'> = {
+  const map: Record<string, MoveDirection> = {
     ArrowUp: 'up',
     ArrowDown: 'down',
     ArrowLeft: 'left',
@@ -245,170 +131,435 @@ const handleKey = (e: KeyboardEvent) => {
   }
 }
 
-let startX = 0,
-  startY = 0
+let startX = 0
+let startY = 0
+
 const onTouchStart = (e: TouchEvent) => {
   startX = e.touches[0].clientX
   startY = e.touches[0].clientY
 }
+
 const onTouchEnd = (e: TouchEvent) => {
-  const dx = e.changedTouches[0].clientX - startX,
-    dy = e.changedTouches[0].clientY - startY
+  const dx = e.changedTouches[0].clientX - startX
+  const dy = e.changedTouches[0].clientY - startY
+
   if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return
+
   move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up')
 }
 
-// 监听 gameStatus 变化，结束时保存
+const goToSettings = () => {
+  router.push('/game/2048/settings')
+}
+
 watch(gameStatus, (newStatus) => {
   if (newStatus !== 'playing') {
-    saveToStorage()
+    void saveToStorage()
   }
 })
+
+watch(
+  () => theme.value.name,
+  () => {
+    preloadThemeIcons(theme.value)
+  },
+  { immediate: true }
+)
 
 onMounted(async () => {
   await restoreFromStorage()
   window.addEventListener('keydown', handleKey)
 })
+
 onUnmounted(() => window.removeEventListener('keydown', handleKey))
 </script>
-
 <template>
-  <div class="ios-2048-game" @touchstart="onTouchStart" @touchend="onTouchEnd">
-    <!-- 游戏标题 -->
-    <h2 class="ios-game-title">2048</h2>
-
-    <!-- iOS 风格分数卡片 -->
-    <div class="ios-score-group">
-      <div class="ios-score-card">
-        <div class="ios-score-label">分数</div>
-        <div class="ios-score-value">{{ score }}</div>
-      </div>
-      <div class="ios-score-card ios-score-best">
-        <div class="ios-score-label">最高</div>
-        <div class="ios-score-value">{{ bestScore }}</div>
-      </div>
-      <button class="ios-button ios-reset-btn" @click="initGrid">新游戏</button>
-    </div>
-
-    <!-- 游戏网格 -->
-    <div class="ios-grid-container">
-      <div class="ios-grid-inner">
-        <div
-          v-for="cell in grid.flat()"
-          :key="cell.id"
-          class="ios-cell"
-          :class="[cellColors[cell.value].bg, cellColors[cell.value].text]"
+  <div
+    v-if="settingsLoaded"
+    class="game-container"
+    :class="[
+      theme.containerBg,
+      theme.name === 'energy' ? 'energy-theme' : '',
+      theme.name === 'deity' ? 'deity-theme' : '',
+    ]"
+    @touchstart="onTouchStart"
+    @touchend="onTouchEnd"
+  >
+    <div class="game-content-shell">
+      <header class="game-header">
+        <h2 class="game-title" :class="theme.titleColor">2048</h2>
+        <button
+          class="settings-btn"
+          :class="theme.name === 'energy' ? 'energy-settings-btn' : ''"
+          @click="goToSettings"
         >
-          <span v-if="cell.value" class="ios-cell-num">{{ cell.value }}</span>
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+        </button>
+      </header>
+
+      <div class="score-group">
+        <div
+          class="score-card"
+          :class="theme.name === 'deity' ? 'deity-score-card' : ''"
+          :style="
+            theme.name === 'energy'
+              ? { background: 'linear-gradient(to right, #06b6d4, #2563eb)' }
+              : {}
+          "
+        >
+          <div
+            class="score-label"
+            :class="
+              theme.name === 'energy'
+                ? 'text-white'
+                : theme.name === 'deity'
+                  ? 'deity-score-label'
+                  : theme.labelColor
+            "
+          >
+            分数
+          </div>
+          <div
+            class="score-value"
+            :class="
+              theme.name === 'energy'
+                ? 'text-white'
+                : theme.name === 'deity'
+                  ? 'deity-score-value'
+                  : theme.textColor
+            "
+          >
+            {{ score }}
+          </div>
         </div>
+        <div
+          class="score-card"
+          :class="[
+            theme.name === 'deity' ? 'deity-score-card' : '',
+            theme.name !== 'energy' ? 'score-best' : '',
+          ]"
+          :style="
+            theme.name === 'energy'
+              ? { background: 'linear-gradient(to right, #06b6d4, #2563eb)' }
+              : {}
+          "
+        >
+          <div
+            class="score-label"
+            :class="
+              theme.name === 'energy'
+                ? 'text-white'
+                : theme.name === 'deity'
+                  ? 'deity-score-label'
+                  : theme.labelColor
+            "
+          >
+            最高
+          </div>
+          <div
+            class="score-value"
+            :class="
+              theme.name === 'energy'
+                ? 'text-white'
+                : theme.name === 'deity'
+                  ? 'deity-score-value'
+                  : theme.textColor
+            "
+          >
+            {{ bestScore }}
+          </div>
+        </div>
+        <button
+          class="new-game-btn"
+          :class="[
+            theme.buttonBg,
+            theme.buttonTextColor,
+            theme.name === 'energy' ? 'energy-action-btn' : '',
+            theme.name === 'deity' ? 'deity-action-btn' : '',
+          ]"
+          @click="initGrid"
+        >
+          新游戏
+        </button>
+      </div>
+
+      <div class="main-area">
+        <div class="grid-wrapper">
+          <div
+            class="grid-container"
+            :class="[theme.gridBg, theme.gridBorder, theme.name === 'deity' ? 'deity-grid' : '']"
+          >
+            <div class="grid-inner">
+              <div
+                v-for="cell in grid.flat()"
+                :key="cell.id"
+                class="cell"
+                :class="[
+                  getCellTheme(cell.value).bg,
+                  getCellTheme(cell.value).text,
+                  theme.name === 'energy' && cell.value ? 'cell-glow' : '',
+                  theme.name === 'deity' ? 'deity-cell' : '',
+                  theme.name === 'deity' && !cell.value ? 'deity-empty-cell' : '',
+                ]"
+                :style="
+                  theme.name === 'energy' && cell.value
+                    ? { '--glow-color': getCellTheme(cell.value).glow }
+                    : {}
+                "
+              >
+                <img
+                  v-if="theme.useIcons && cell.value && getIconSrc(cell.value)"
+                  :src="getIconSrc(cell.value)!"
+                  :alt="String(cell.value)"
+                  class="cell-icon"
+                  loading="eager"
+                  decoding="async"
+                  draggable="false"
+                />
+                <span v-else-if="cell.value" class="cell-num">{{ cell.value }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="hint" :class="[theme.labelColor, theme.name === 'deity' ? 'deity-hint' : '']">
+          滑动或使用方向键移动方块
+        </p>
       </div>
     </div>
 
-    <!-- 提示 -->
-    <p class="ios-hint">滑动或使用方向键移动方块</p>
-
-    <!-- iOS 模态弹窗 -->
-    <div v-if="gameStatus !== 'playing'" class="ios-modal-overlay">
-      <div class="ios-modal-card">
-        <div class="ios-modal-icon" :class="gameStatus === 'won' ? 'ios-modal-won' : ''">
-          {{ gameStatus === 'won' ? '🎉' : '' }}
+    <div v-if="gameStatus !== 'playing'" class="modal-overlay">
+      <div class="modal-card" :class="theme.name === 'deity' ? 'deity-modal-card' : ''">
+        <div
+          class="modal-icon"
+          :class="[
+            { 'modal-won': gameStatus === 'won', 'modal-lost': gameStatus === 'lost' },
+            theme.name === 'deity' ? 'deity-modal-icon' : '',
+          ]"
+        >
+          {{ gameStatus === 'won' ? '🎉' : '💀' }}
         </div>
-        <h3 class="ios-modal-title">{{ gameStatus === 'won' ? '恭喜获胜!' : '游戏结束' }}</h3>
-        <p class="ios-modal-score">得分: {{ score }}</p>
-        <button class="ios-button ios-modal-btn" @click="initGrid">再来一次</button>
+        <h3 class="modal-title">{{ gameStatus === 'won' ? '恭喜获胜!' : '游戏结束' }}</h3>
+        <p class="modal-score">得分: {{ score }}</p>
+        <button
+          class="modal-btn"
+          :class="[
+            theme.buttonBg,
+            theme.buttonTextColor,
+            theme.name === 'energy' ? 'energy-action-btn' : '',
+            theme.name === 'deity' ? 'deity-action-btn' : '',
+          ]"
+          @click="initGrid"
+        >
+          再来一次
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.ios-2048-game {
+.game-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 100%;
+  width: 100%;
+  transition: background 300ms ease;
+}
+
+.game-content-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 100%;
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.game-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.game-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  transition: color 300ms ease;
+}
+
+.settings-btn {
+  background: transparent;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--ios-text-secondary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.settings-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.settings-btn:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.score-group {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.main-area {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px;
+  justify-content: center;
+  gap: 16px;
 }
 
-.ios-game-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--ios-text-primary);
-  margin: 0 0 20px;
-}
-
-/* iOS 分数组 */
-.ios-score-group {
+.grid-wrapper {
+  width: 100%;
   display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
+  justify-content: center;
 }
 
-.ios-score-card {
+.score-card {
   background: var(--ios-surface);
   border-radius: var(--ios-radius-md);
   padding: 8px 16px;
   min-width: 72px;
   text-align: center;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background 300ms ease;
 }
 
-.ios-score-best {
+.score-best {
   background: linear-gradient(135deg, #ede9fe, #fce7f3);
 }
 
-.ios-score-label {
+.score-label {
   font-size: 11px;
-  color: var(--ios-text-secondary);
   font-weight: 500;
+  transition: color 300ms ease;
 }
 
-.ios-score-value {
+.score-value {
   font-size: 20px;
   font-weight: 700;
-  color: var(--ios-text-primary);
+  transition: color 300ms ease;
 }
 
-.ios-reset-btn {
+.new-game-btn {
   padding: 8px 16px;
   font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--ios-radius-md);
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease;
 }
 
-/* iOS 游戏网格 */
-.ios-grid-container {
-  background: var(--ios-background);
+.new-game-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.grid-container {
+  width: 100%;
+  max-width: 520px;
   border-radius: var(--ios-radius-lg);
-  padding: 12px;
+  padding: 8px;
+  transition:
+    background 300ms ease,
+    border-color 300ms ease;
 }
 
-.ios-grid-inner {
+.grid-inner {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: 8px;
 }
 
-.ios-cell {
-  width: 64px;
-  height: 64px;
+.cell {
+  aspect-ratio: 1;
   border-radius: var(--ios-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  transition: background 150ms var(--ios-ease);
+  transition:
+    box-shadow 200ms ease,
+    transform 160ms ease,
+    opacity 160ms ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.ios-cell-num {
-  font-size: 22px;
+.cell-glow {
+  box-shadow:
+    0 0 12px var(--glow-color),
+    inset 0 0 8px rgba(255, 255, 255, 0.1);
 }
 
-.ios-hint {
+.cell-num {
+  font-size: 24px;
+}
+
+.cell-icon {
+  width: 90%;
+  height: 90%;
+  display: block;
+  object-fit: contain;
+  border-radius: 8px;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.hint {
   font-size: 14px;
-  color: var(--ios-text-secondary);
-  margin-top: 24px;
+  margin: 0;
+  text-align: center;
+  transition: color 300ms ease;
 }
 
-/* iOS 模态 */
-.ios-modal-overlay {
+.modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
@@ -419,7 +570,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
   z-index: 200;
 }
 
-.ios-modal-card {
+.modal-card {
   background: var(--ios-surface);
   border-radius: 20px;
   padding: 32px 24px;
@@ -427,7 +578,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
   text-align: center;
 }
 
-.ios-modal-icon {
+.modal-icon {
   width: 64px;
   height: 64px;
   border-radius: 16px;
@@ -439,24 +590,125 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
   font-size: 32px;
 }
 
-.ios-modal-won {
+.modal-won {
   background: linear-gradient(135deg, #ffcc00, #ff9500);
 }
 
-.ios-modal-title {
+.modal-lost {
+  background: linear-gradient(135deg, #fca5a5, #dc2626);
+  color: #fff7ed;
+}
+
+.modal-title {
   font-size: 22px;
   font-weight: 600;
   color: var(--ios-text-primary);
   margin: 0 0 8px;
 }
 
-.ios-modal-score {
+.modal-score {
   font-size: 15px;
   color: var(--ios-text-secondary);
   margin: 0 0 24px;
 }
 
-.ios-modal-btn {
+.modal-btn {
   width: 100%;
+  padding: 14px 20px;
+  font-size: 17px;
+  font-weight: 600;
+  border: none;
+  border-radius: var(--ios-radius-md);
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease;
+}
+
+.modal-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.deity-theme {
+  background: linear-gradient(135deg, #09090b 0%, #1c1917 45%, #78350f 100%);
+}
+
+.deity-score-card {
+  background: linear-gradient(135deg, rgba(245, 230, 184, 0.18), rgba(212, 168, 79, 0.28));
+  border: 1px solid rgba(245, 230, 184, 0.18);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.deity-score-label {
+  color: rgba(253, 230, 138, 0.82);
+}
+
+.deity-score-value {
+  color: #fef3c7;
+}
+
+.deity-action-btn {
+  box-shadow: 0 10px 24px rgba(217, 119, 6, 0.28);
+}
+
+.deity-grid {
+  background: linear-gradient(180deg, rgba(28, 25, 23, 0.9), rgba(12, 10, 9, 0.96));
+  border-color: rgba(245, 230, 184, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(120, 53, 15, 0.28);
+}
+
+.deity-cell {
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 230, 184, 0.1),
+    0 6px 18px rgba(0, 0, 0, 0.16);
+}
+
+.deity-empty-cell {
+  background: linear-gradient(180deg, rgba(41, 37, 36, 0.92), rgba(17, 24, 39, 0.88)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 0 0 1px rgba(245, 230, 184, 0.08),
+    inset 0 10px 18px rgba(0, 0, 0, 0.22);
+}
+
+.deity-hint {
+  color: rgba(253, 230, 138, 0.76);
+}
+
+.deity-modal-card {
+  background: linear-gradient(180deg, #1c1917, #0c0a09);
+  border: 1px solid rgba(245, 230, 184, 0.14);
+}
+
+.deity-modal-icon {
+  background: linear-gradient(135deg, rgba(245, 230, 184, 0.18), rgba(212, 168, 79, 0.3));
+}
+
+.energy-theme {
+  background-image:
+    radial-gradient(circle at top, rgba(34, 211, 238, 0.18), transparent 32%),
+    radial-gradient(circle at bottom, rgba(168, 85, 247, 0.16), transparent 28%);
+}
+
+.energy-settings-btn {
+  color: #cffafe;
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  box-shadow: 0 8px 24px rgba(14, 165, 233, 0.18);
+}
+
+.energy-settings-btn:hover {
+  background: rgba(15, 23, 42, 0.58);
+}
+
+.energy-settings-btn:active {
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.energy-action-btn {
+  box-shadow: 0 10px 28px rgba(6, 182, 212, 0.28);
 }
 </style>

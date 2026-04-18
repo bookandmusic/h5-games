@@ -7,22 +7,30 @@ const router = useRouter()
 const route = useRoute()
 
 const gameId = computed(() => route.params.id as string)
+const isSettings = computed(() => route.path.endsWith('/settings'))
 
 const gameComponents: Record<string, Component> = {
   '2048': defineAsyncComponent(() => import('../games/game2048/index.vue')),
 }
 
+const settingsComponents: Record<string, Component> = {
+  '2048': defineAsyncComponent(() => import('../games/game2048/Settings.vue')),
+}
+
 const GameComponent = computed(() => {
   if (!gameId.value) return null
+  if (isSettings.value) {
+    return settingsComponents[gameId.value] || null
+  }
   return gameComponents[gameId.value] || null
 })
 
-// 返回首页
+const pageTitle = computed(() => (isSettings.value ? '设置' : ''))
+
 const goBack = () => {
-  router.push('/')
+  router.push(isSettings.value ? `/game/${gameId.value}` : '/')
 }
 
-// 监听浏览器返回事件，如果没有游戏则返回首页
 const handlePopState = () => {
   if (!GameComponent.value) {
     router.push('/')
@@ -37,7 +45,6 @@ onUnmounted(() => {
   window.removeEventListener('popstate', handlePopState)
 })
 
-// 如果游戏不存在，自动返回首页
 if (!GameComponent.value && gameId.value) {
   router.replace('/')
 }
@@ -45,7 +52,6 @@ if (!GameComponent.value && gameId.value) {
 
 <template>
   <div class="ios-game-page">
-    <!-- iOS 导航栏 - 固定 -->
     <header class="ios-game-header">
       <button class="ios-back-btn" @click="goBack">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -53,13 +59,12 @@ if (!GameComponent.value && gameId.value) {
         </svg>
         <span class="ios-back-text">返回</span>
       </button>
+      <span v-if="pageTitle" class="ios-header-title">{{ pageTitle }}</span>
     </header>
 
-    <!-- 游戏内容 - 全屏 -->
     <main class="ios-game-content">
       <component :is="GameComponent" v-if="GameComponent" />
 
-      <!-- 游戏不存在 -->
       <div v-else class="ios-empty-page">
         <div class="ios-empty-icon-large">
           <svg
@@ -126,13 +131,19 @@ if (!GameComponent.value && gameId.value) {
   font-weight: 500;
 }
 
-/* 游戏内容区域 */
+.ios-header-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ios-text-primary);
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .ios-game-content {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
   display: flex;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
 }
 
 .ios-empty-page {
