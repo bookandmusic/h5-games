@@ -120,7 +120,7 @@ jobs:
             artifact_ext: exe msi
           - platform: macos
             target: universal-apple-darwin
-            runner: macos-latest
+            runner: macos-14
             ext: dmg
             artifact_ext: dmg app.tar.gz
           - platform: linux
@@ -169,6 +169,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           args: --target ${{ matrix.target }}
+          retryAttempts: 3
 
       - name: Rename artifacts
         shell: bash
