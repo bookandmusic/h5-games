@@ -1,34 +1,69 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, onUnmounted, type Component } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, watch, type Component } from 'vue'
 
 import { useRoute, useRouter } from 'vue-router'
+
+import { musicManager } from '../games/chinese-chess/musicManager'
 
 const router = useRouter()
 const route = useRoute()
 
 const gameId = computed(() => route.params.id as string)
 const isSettings = computed(() => route.path.endsWith('/settings'))
+const isHome = computed(() => route.path.endsWith('/home'))
+
+const homeComponents: Record<string, Component> = {
+  'chinese-chess': defineAsyncComponent(() => import('../games/chinese-chess/Home.vue')),
+}
 
 const gameComponents: Record<string, Component> = {
   '2048': defineAsyncComponent(() => import('../games/game2048/index.vue')),
+  'chinese-chess': defineAsyncComponent(() => import('../games/chinese-chess/index.vue')),
 }
 
 const settingsComponents: Record<string, Component> = {
   '2048': defineAsyncComponent(() => import('../games/game2048/Settings.vue')),
+  'chinese-chess': defineAsyncComponent(() => import('../games/chinese-chess/Settings.vue')),
 }
+
+let lastGameId: string | null = null
+
+watch(
+  gameId,
+  (newId, oldId) => {
+    if (oldId === 'chinese-chess' && newId !== 'chinese-chess') {
+      musicManager.stop()
+    }
+    lastGameId = newId ?? null
+  },
+  { immediate: true }
+)
 
 const GameComponent = computed(() => {
   if (!gameId.value) return null
+  if (isHome.value) {
+    return homeComponents[gameId.value] || null
+  }
   if (isSettings.value) {
     return settingsComponents[gameId.value] || null
   }
   return gameComponents[gameId.value] || null
 })
 
-const pageTitle = computed(() => (isSettings.value ? '设置' : ''))
+const pageTitle = computed(() => {
+  if (isHome.value) return ''
+  if (isSettings.value) return '设置'
+  return ''
+})
 
 const goBack = () => {
-  router.push(isSettings.value ? `/game/${gameId.value}` : '/')
+  if (isHome.value) {
+    router.push('/')
+  } else if (isSettings.value) {
+    router.push(`/game/${gameId.value}/home`)
+  } else {
+    router.push(`/game/${gameId.value}/home`)
+  }
 }
 
 const handlePopState = () => {
@@ -43,6 +78,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('popstate', handlePopState)
+  if (lastGameId === 'chinese-chess') {
+    musicManager.stop()
+  }
 })
 
 if (!GameComponent.value && gameId.value) {
