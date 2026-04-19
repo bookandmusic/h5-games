@@ -304,7 +304,7 @@ const confirmResign = async () => {
 const closeSetupModal = () => {
   showSetupModal.value = false
   if (!isRestartModal.value) {
-    router.push(`/game/${GAME_ID}/home`)
+    router.push(`/game/${GAME_ID}`)
   }
   isRestartModal.value = false
 }
@@ -335,7 +335,7 @@ const startGame = async () => {
 }
 
 const goHome = () => {
-  router.push(`/game/${GAME_ID}/home`)
+  router.push(`/game/${GAME_ID}`)
 }
 
 const commitMove = async (move: Move) => {
@@ -417,7 +417,7 @@ const restoreState = async () => {
     return
   }
 
-  router.replace(`/game/${GAME_ID}/home`)
+  router.replace(`/game/${GAME_ID}`)
 }
 
 const handleSelect = (position: Position) => {

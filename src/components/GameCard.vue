@@ -10,24 +10,58 @@ const props = defineProps<{
 
 const router = useRouter()
 
-// iOS App Store 风格渐变色数组 - 基于索引循环使用
-const gradients = [
-  { iconBg: 'linear-gradient(135deg, #FF9500, #FFCC00)' }, // 0 - 橙黄色
-  { iconBg: 'linear-gradient(135deg, #007AFF, #5856D6)' }, // 1 - 蓝紫色
-  { iconBg: 'linear-gradient(135deg, #34C759, #30D158)' }, // 2 - 绿色
-  { iconBg: 'linear-gradient(135deg, #FF2D55, #FF375F)' }, // 3 - 粉红色
-  { iconBg: 'linear-gradient(135deg, #AF52DE, #BF5AF2)' }, // 4 - 紫色
-  { iconBg: 'linear-gradient(135deg, #32D74B, #34C759)' }, // 5 - 青绿色
-  { iconBg: 'linear-gradient(135deg, #64D2FF, #007AFF)' }, // 6 - 天蓝色
-  { iconBg: 'linear-gradient(135deg, #FF3B30, #FF9500)' }, // 7 - 红橙色
-  { iconBg: 'linear-gradient(135deg, #7C3AED, #F43F5E)' }, // 8 - 紫玫瑰
-  { iconBg: 'linear-gradient(135deg, #00C7BE, #32D74B)' }, // 9 - 青色
-  { iconBg: 'linear-gradient(135deg, #FFD60A, #FFCC00)' }, // 10 - 金黄色
-  { iconBg: 'linear-gradient(135deg, #5E5CE6, #BF5AF2)' }, // 11 - 深紫色
+const neonGradients = [
+  {
+    bg: 'rgba(0, 255, 255, 0.1)',
+    border: '#00ffff',
+    glow: 'rgba(0, 255, 255, 0.4)',
+    iconBg: 'linear-gradient(135deg, #00b8b8, #00ffff)',
+  },
+  {
+    bg: 'rgba(255, 0, 255, 0.1)',
+    border: '#ff00ff',
+    glow: 'rgba(255, 0, 255, 0.4)',
+    iconBg: 'linear-gradient(135deg, #b800b8, #ff00ff)',
+  },
+  {
+    bg: 'rgba(99, 102, 241, 0.1)',
+    border: '#6366f1',
+    glow: 'rgba(99, 102, 241, 0.4)',
+    iconBg: 'linear-gradient(135deg, #4f46e5, #6366f1)',
+  },
+  {
+    bg: 'rgba(255, 107, 157, 0.1)',
+    border: '#ff6b9d',
+    glow: 'rgba(255, 107, 157, 0.4)',
+    iconBg: 'linear-gradient(135deg, #f472b6, #ff6b9d)',
+  },
+  {
+    bg: 'rgba(191, 90, 242, 0.1)',
+    border: '#bf5af2',
+    glow: 'rgba(191, 90, 242, 0.4)',
+    iconBg: 'linear-gradient(135deg, #9333ea, #bf5af2)',
+  },
+  {
+    bg: 'rgba(0, 255, 136, 0.1)',
+    border: '#00ff88',
+    glow: 'rgba(0, 255, 136, 0.4)',
+    iconBg: 'linear-gradient(135deg, #10b981, #00ff88)',
+  },
+  {
+    bg: 'rgba(255, 149, 0, 0.1)',
+    border: '#ff9500',
+    glow: 'rgba(255, 149, 0, 0.4)',
+    iconBg: 'linear-gradient(135deg, #f59e0b, #ff9500)',
+  },
+  {
+    bg: 'rgba(255, 45, 85, 0.1)',
+    border: '#ff2d55',
+    glow: 'rgba(255, 45, 85, 0.4)',
+    iconBg: 'linear-gradient(135deg, #dc2626, #ff2d55)',
+  },
 ]
 
-// 根据索引获取渐变，循环使用
-const gradient = gradients[props.index % gradients.length]
+const neonStyle = neonGradients[props.index % neonGradients.length]
 
 const handleClick = () => {
   router.push(props.game.route)
@@ -35,128 +69,213 @@ const handleClick = () => {
 </script>
 
 <template>
-  <div class="ios-game-card" @click="handleClick">
-    <div class="ios-card-inner">
-      <!-- 游戏图标 -->
-      <div class="ios-app-icon-wrapper">
+  <div
+    class="cyber-card"
+    :style="{ '--neon-color': neonStyle.border, '--neon-glow': neonStyle.glow }"
+    @click="handleClick"
+  >
+    <div class="cyber-card-inner">
+      <div class="cyber-card-glow"></div>
+
+      <div class="cyber-app-icon-wrapper">
         <div
-          class="ios-app-icon-large"
-          :style="{ background: game.icon ? 'transparent' : gradient.iconBg }"
+          class="cyber-app-icon"
+          :style="{ background: game.icon ? 'transparent' : neonStyle.iconBg }"
         >
-          <img v-if="game.icon" :src="game.icon" :alt="game.name" class="ios-app-icon-img" />
-          <span v-else class="ios-app-icon-text">{{ game.name.slice(0, 2) }}</span>
+          <img v-if="game.icon" :src="game.icon" :alt="game.name" class="cyber-app-icon-img" />
+          <span v-else class="cyber-app-icon-text">{{ game.name.slice(0, 2) }}</span>
         </div>
+        <div class="cyber-icon-glow"></div>
       </div>
 
-      <!-- 游戏信息 -->
-      <div class="ios-card-info">
-        <h3 class="ios-card-title">{{ game.name }}</h3>
-        <p class="ios-card-subtitle">{{ game.category }}</p>
-        <p class="ios-card-desc">{{ game.description }}</p>
-      </div>
-
-      <!-- iOS 获取按钮 -->
-      <div class="ios-card-action">
-        <button class="ios-get-button">获取</button>
+      <div class="cyber-card-info">
+        <h3 class="cyber-card-title">{{ game.name }}</h3>
+        <div class="cyber-card-meta">
+          <span class="cyber-card-category">{{ game.category }}</span>
+          <span class="cyber-card-badge">PLAY</span>
+        </div>
+        <p class="cyber-card-desc">{{ game.description }}</p>
       </div>
     </div>
+
+    <div class="cyber-card-border"></div>
   </div>
 </template>
 
 <style scoped>
-.ios-game-card {
-  background: var(--ios-surface);
-  border-radius: var(--ios-radius-md);
-  padding: 12px;
+.cyber-card {
+  position: relative;
+  border-radius: var(--ios-radius-lg);
   cursor: pointer;
-  transition: transform 150ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  overflow: hidden;
+  transition: all var(--ios-duration-fast) var(--ios-ease);
 }
 
-.ios-game-card:active {
-  transform: scale(0.97);
-}
-
-.ios-card-inner {
+.cyber-card-inner {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  padding: 16px;
+  background: var(--ios-glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--ios-radius-lg);
 }
 
-.ios-app-icon-wrapper {
+.cyber-card-glow {
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, var(--neon-glow) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity var(--ios-duration-normal) var(--ios-ease);
+  pointer-events: none;
+}
+
+.cyber-card:hover .cyber-card-glow {
+  opacity: 0.3;
+}
+
+.cyber-card:active {
+  transform: scale(0.98);
+}
+
+.cyber-card:active .cyber-card-glow {
+  opacity: 0.5;
+}
+
+.cyber-card-border {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--ios-radius-lg);
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    var(--neon-color),
+    rgba(255, 255, 255, 0.1),
+    var(--neon-color)
+  );
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cyber-card:hover .cyber-card-border {
+  background: linear-gradient(135deg, var(--neon-color), var(--neon-color));
+  box-shadow:
+    0 0 15px var(--neon-glow),
+    inset 0 0 15px var(--neon-glow);
+}
+
+.cyber-app-icon-wrapper {
+  position: relative;
   flex-shrink: 0;
 }
 
-.ios-app-icon-large {
-  width: 60px;
-  height: 60px;
-  border-radius: 14px;
+.cyber-app-icon {
+  width: 68px;
+  height: 68px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
 }
 
-.ios-app-icon-text {
+.cyber-app-icon::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
+.cyber-icon-glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 20px;
+  background: var(--neon-color);
+  opacity: 0;
+  filter: blur(12px);
+  transition: opacity var(--ios-duration-normal) var(--ios-ease);
+  pointer-events: none;
+}
+
+.cyber-card:hover .cyber-icon-glow {
+  opacity: 0.4;
+}
+
+.cyber-app-icon-text {
+  font-family: 'Orbitron', sans-serif;
   font-size: 22px;
   font-weight: 700;
   color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.ios-app-icon-img {
+.cyber-app-icon-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 14px;
+  border-radius: 16px;
 }
 
-.ios-card-info {
+.cyber-card-info {
   flex: 1;
   min-width: 0;
 }
 
-.ios-card-title {
-  font-size: 17px;
+.cyber-card-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
   font-weight: 600;
   color: var(--ios-text-primary);
-  margin: 0 0 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 0 0 8px;
+  letter-spacing: 0.5px;
 }
 
-.ios-card-subtitle {
-  font-size: 14px;
-  color: var(--ios-text-secondary);
-  margin: 0 0 4px;
+.cyber-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.ios-card-desc {
-  font-size: 12px;
+.cyber-card-category {
+  font-size: 13px;
+  color: var(--neon-color);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.cyber-card-badge {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--neon-color);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--neon-color);
+  letter-spacing: 1px;
+}
+
+.cyber-card-desc {
+  font-size: 13px;
   color: var(--ios-text-tertiary);
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.ios-card-action {
-  flex-shrink: 0;
-}
-
-.ios-get-button {
-  min-width: 64px;
-  padding: 6px 12px;
-  background: var(--ios-primary);
-  color: white;
-  border-radius: var(--ios-radius-md);
-  font-size: 15px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: transform 150ms cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-
-.ios-get-button:active {
-  transform: scale(0.95);
+  line-height: 1.4;
 }
 </style>

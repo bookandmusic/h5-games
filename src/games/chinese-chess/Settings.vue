@@ -13,7 +13,7 @@ const bgMusicEnabled = ref(true)
 const loaded = ref(false)
 
 const goBack = () => {
-  router.push(`/game/${GAME_ID}/home`)
+  router.push(`/game/${GAME_ID}`)
 }
 
 const toggleBgMusic = () => {

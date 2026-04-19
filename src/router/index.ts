@@ -11,16 +11,18 @@ const routes: RouteRecordRaw[] = [
     path: '/game/:id',
     name: 'Game',
     component: () => import('../views/GameView.vue'),
-  },
-  {
-    path: '/game/:id/home',
-    name: 'GameHome',
-    component: () => import('../views/GameView.vue'),
-  },
-  {
-    path: '/game/:id/settings',
-    name: 'GameSettings',
-    component: () => import('../views/GameView.vue'),
+    children: [
+      {
+        path: 'play',
+        name: 'GamePlay',
+        component: () => import('../views/GameView.vue'),
+      },
+      {
+        path: 'settings',
+        name: 'GameSettings',
+        component: () => import('../views/GameView.vue'),
+      },
+    ],
   },
 ]
 

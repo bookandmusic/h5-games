@@ -37,7 +37,7 @@ const handleLocalMode = async () => {
       mode: 'local',
       resume: true,
     })
-    router.push(`/game/${GAME_ID}`)
+    router.push(`/game/${GAME_ID}/play`)
   } else {
     setupMode.value = 'local'
     draftConfig.value = { ...defaultConfig, mode: 'local' }
@@ -68,7 +68,7 @@ const startGame = async () => {
     resume: false,
   })
   showSetupModal.value = false
-  router.push(`/game/${GAME_ID}`)
+  router.push(`/game/${GAME_ID}/play`)
 }
 
 onMounted(async () => {

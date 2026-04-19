@@ -1,36 +1,63 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap');
 @import 'tailwindcss';
 
-/* iOS HIG 设计系统 */
+/* Cyberpunk + Glassmorphism Gaming Theme - 游戏聚合App赛博朋克主题 */
 :root {
-  /* iOS 系统颜色 */
-  --ios-primary: #7c3aed;
-  --ios-primary-light: #a78bfa;
+  /* 霓虹主题强调色 */
+  --ios-primary: #6366f1;
+  --ios-primary-light: #818cf8;
+  --ios-primary-glow: rgba(99, 102, 241, 0.5);
 
-  /* iOS 系统背景层次 */
-  --ios-background: #f2f2f7; /* iOS grouped 背景灰 */
-  --ios-surface: #ffffff; /* iOS 卡片/表面白色 */
-  --ios-secondary-surface: #e5e5ea;
+  /* 霓虹辅助色 - Cyberpunk palette */
+  --ios-neon-cyan: #00ffff;
+  --ios-neon-magenta: #ff00ff;
+  --ios-neon-green: #00ff88;
+  --ios-neon-pink: #ff6b9d;
+  --ios-neon-orange: #ff9500;
+  --ios-neon-purple: #bf5af2;
 
-  /* iOS 文字颜色 */
-  --ios-text-primary: #000000; /* iOS 主文字纯黑 */
-  --ios-text-secondary: #8e8e93; /* iOS secondary 文字 */
-  --ios-text-tertiary: #c7c7cc; /* iOS tertiary 文字 */
+  /* 发光效果强度 */
+  --ios-glow-intensity: 0.4;
+  --ios-glow-blur: 20px;
 
-  /* iOS 系统控件颜色 */
-  --ios-search-bg: #e5e5ea; /* iOS 搜索框背景 */
-  --ios-segment-bg: rgba(118, 118, 128, 0.12); /* iOS 分段控制器背景 */
+  /* 深色背景层次 */
+  --ios-background: #0a0a0f;
+  --ios-background-gradient-start: #0a0a0f;
+  --ios-background-gradient-end: #020203;
+  --ios-surface: rgba(255, 255, 255, 0.06);
+  --ios-surface-hover: rgba(255, 255, 255, 0.1);
+  --ios-secondary-surface: rgba(255, 255, 255, 0.04);
 
-  /* iOS 导航栏背景 */
-  --ios-header-bg: rgba(242, 242, 247, 0.8);
+  /* 玻璃态效果 */
+  --ios-glass-bg: rgba(255, 255, 255, 0.08);
+  --ios-glass-border: rgba(255, 255, 255, 0.15);
+  --ios-glass-blur: 20px;
 
-  /* iOS 圆角 */
+  /* 文字颜色 */
+  --ios-text-primary: #f4f4f5;
+  --ios-text-secondary: #a1a1aa;
+  --ios-text-tertiary: #71717a;
+
+  /* 控件颜色 */
+  --ios-search-bg: rgba(255, 255, 255, 0.08);
+  --ios-segment-bg: rgba(255, 255, 255, 0.06);
+
+  /* 导航栏 */
+  --ios-header-bg: rgba(10, 10, 15, 0.85);
+
+  /* 边框 */
+  --ios-border: rgba(255, 255, 255, 0.1);
+  --ios-border-light: rgba(255, 255, 255, 0.18);
+
+  /* 圆角 */
   --ios-radius-sm: 8px;
   --ios-radius-md: 12px;
   --ios-radius-lg: 16px;
+  --ios-radius-xl: 20px;
 
-  /* iOS 动画 */
-  --ios-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  /* 动画 */
+  --ios-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --ios-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --ios-duration-fast: 150ms;
   --ios-duration-normal: 250ms;
 }
@@ -127,4 +154,122 @@ body {
 .ios-icon-lg {
   width: 28px;
   height: 28px;
+}
+
+/* Glassmorphism Card Base */
+.ios-glass-card {
+  background: var(--ios-glass-bg);
+  backdrop-filter: blur(var(--ios-glass-blur));
+  -webkit-backdrop-filter: blur(var(--ios-glass-blur));
+  border-radius: var(--ios-radius-lg);
+  border: 1px solid var(--ios-glass-border);
+  position: relative;
+}
+
+/* Neon Glow Effects */
+.ios-neon-glow {
+  box-shadow:
+    0 0 10px var(--ios-primary-glow),
+    0 0 20px var(--ios-primary-glow),
+    0 0 40px rgba(99, 102, 241, 0.2);
+}
+
+.ios-neon-glow-cyan {
+  box-shadow:
+    0 0 10px rgba(0, 255, 255, 0.4),
+    0 0 20px rgba(0, 255, 255, 0.3),
+    0 0 40px rgba(0, 255, 255, 0.2);
+}
+
+.ios-neon-glow-magenta {
+  box-shadow:
+    0 0 10px rgba(255, 0, 255, 0.4),
+    0 0 20px rgba(255, 0, 255, 0.3),
+    0 0 40px rgba(255, 0, 255, 0.2);
+}
+
+/* Gradient Border Effect */
+.ios-gradient-border {
+  position: relative;
+  background: var(--ios-surface);
+  border-radius: var(--ios-radius-lg);
+}
+
+.ios-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--ios-radius-lg);
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    var(--ios-neon-cyan),
+    var(--ios-neon-magenta),
+    var(--ios-neon-purple)
+  );
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+/* Animated Gradient Background */
+.ios-gradient-bg-animated {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 255, 0.05) 0%,
+    rgba(255, 0, 255, 0.05) 50%,
+    rgba(99, 102, 241, 0.05) 100%
+  );
+  animation: gradientShift 8s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Neon Button Base */
+.ios-neon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: var(--ios-radius-md);
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--ios-primary-light);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--ios-duration-fast) var(--ios-ease);
+  overflow: hidden;
+}
+
+.ios-neon-btn::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--ios-primary), var(--ios-neon-cyan));
+  opacity: 0;
+  filter: blur(10px);
+  transition: opacity var(--ios-duration-fast) var(--ios-ease);
+  z-index: -1;
+}
+
+.ios-neon-btn:hover::before,
+.ios-neon-btn:active::before {
+  opacity: 0.5;
+}
+
+.ios-neon-btn:active {
+  transform: scale(0.97);
 }
