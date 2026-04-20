@@ -23,7 +23,7 @@ export const defaultTheme: GameTheme = {
   titleColor: 'text-gray-900',
   textColor: 'text-gray-900',
   labelColor: 'text-gray-500',
-  buttonBg: 'bg-purple-600',
-  buttonTextColor: 'text-white',
+  buttonBg: 'bg-amber-600',
+  buttonTextColor: 'text-amber-50',
   useIcons: false,
 }

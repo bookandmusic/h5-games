@@ -23,6 +23,15 @@ const settingsLoaded = ref(false)
 const theme = computed(() => getTheme(settingsStore.theme))
 const difficulty = computed(() => settingsStore.difficulty)
 const nextCellId = () => cellIdCounter++
+const resultTitle = computed(() => (gameStatus.value === 'won' ? '恭喜获胜' : '本局结束'))
+const resultDescription = computed(() => {
+  const themeLabel = {
+    default: '经典 2048',
+    energy: '能量进化',
+    deity: '神祇进阶',
+  }[theme.value.name]
+  return `${themeLabel}主题 · 得分 ${score.value} · 最高 ${bestScore.value}`
+})
 
 const getCellTheme = (value: number) => theme.value.cellThemes[value] || theme.value.cellThemes[0]
 
@@ -190,7 +199,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
         <h2 class="game-title" :class="theme.titleColor">2048</h2>
         <button
           class="settings-btn"
-          :class="theme.name === 'energy' ? 'energy-settings-btn' : ''"
+          :class="[
+            theme.name === 'default' ? 'default-settings-btn' : '',
+            theme.name === 'energy' ? 'energy-settings-btn' : '',
+          ]"
+          aria-label="打开 2048 设置"
           @click="goToSettings"
         >
           <svg
@@ -289,11 +302,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
         <button
           class="new-game-btn"
           :class="[
+            theme.name === 'default' ? 'default-action-btn' : '',
             theme.buttonBg,
             theme.buttonTextColor,
             theme.name === 'energy' ? 'energy-action-btn' : '',
             theme.name === 'deity' ? 'deity-action-btn' : '',
           ]"
+          aria-label="开始新的一局 2048"
           @click="initGrid"
         >
           新游戏
@@ -301,6 +316,10 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
       </div>
 
       <div class="main-area">
+        <div class="sr-only" aria-live="polite">
+          当前得分 {{ score }}，最高分 {{ bestScore }}，
+          {{ gameStatus === 'playing' ? '游戏进行中' : resultTitle }}
+        </div>
         <div class="grid-wrapper">
           <div
             class="grid-container"
@@ -344,22 +363,103 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
       </div>
     </div>
 
-    <div v-if="gameStatus !== 'playing'" class="modal-overlay">
-      <div class="modal-card" :class="theme.name === 'deity' ? 'deity-modal-card' : ''">
+    <div
+      v-if="gameStatus !== 'playing'"
+      class="modal-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="result-modal-title"
+      aria-describedby="result-modal-desc"
+    >
+      <div
+        class="modal-card"
+        :class="[
+          theme.name === 'deity' ? 'deity-modal-card' : '',
+          theme.name === 'energy' ? 'energy-modal-card' : '',
+        ]"
+      >
         <div
           class="modal-icon"
           :class="[
             { 'modal-won': gameStatus === 'won', 'modal-lost': gameStatus === 'lost' },
+            theme.name === 'energy' ? 'energy-modal-icon' : '',
             theme.name === 'deity' ? 'deity-modal-icon' : '',
           ]"
         >
-          {{ gameStatus === 'won' ? '🎉' : '💀' }}
+          <svg
+            v-if="gameStatus === 'won' && theme.name === 'default'"
+            viewBox="0 0 64 64"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path d="M16 52h32" stroke="currentColor" stroke-width="4" stroke-linecap="round" />
+            <path
+              d="M20 16h24v8c0 10.493-8.507 19-19 19h-5V16z"
+              fill="currentColor"
+              opacity="0.22"
+            />
+            <path
+              d="M20 16h24v8c0 10.493-8.507 19-19 19h-5V16z"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M20 21H12c0 8 4 14 11 14"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+            <path
+              d="M44 21h8c0 8-4 14-11 14"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+          </svg>
+          <svg
+            v-else-if="gameStatus === 'won' && theme.name === 'energy'"
+            viewBox="0 0 64 64"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path d="M32 6 13 33h12l-4 25 30-33H38l5-19Z" fill="currentColor" opacity="0.22" />
+            <path
+              d="M32 6 13 33h12l-4 25 30-33H38l5-19Z"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <svg v-else-if="gameStatus === 'won'" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <path
+              d="m32 9 6.8 13.8 15.2 2.2-11 10.8 2.6 15.2L32 43.8 18.4 51l2.6-15.2L10 25l15.2-2.2L32 9Z"
+              fill="currentColor"
+              opacity="0.22"
+            />
+            <path
+              d="m32 9 6.8 13.8 15.2 2.2-11 10.8 2.6 15.2L32 43.8 18.4 51l2.6-15.2L10 25l15.2-2.2L32 9Z"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <svg v-else viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="22" stroke="currentColor" stroke-width="4" opacity="0.3" />
+            <path
+              d="M24 24 40 40M40 24 24 40"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+          </svg>
         </div>
-        <h3 class="modal-title">{{ gameStatus === 'won' ? '恭喜获胜!' : '游戏结束' }}</h3>
-        <p class="modal-score">得分: {{ score }}</p>
+        <h3 id="result-modal-title" class="modal-title">{{ resultTitle }}</h3>
+        <p id="result-modal-desc" class="modal-score">{{ resultDescription }}</p>
         <button
           class="modal-btn"
           :class="[
+            theme.name === 'default' ? 'default-action-btn' : '',
             theme.buttonBg,
             theme.buttonTextColor,
             theme.name === 'energy' ? 'energy-action-btn' : '',
@@ -433,6 +533,24 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
   background: rgba(0, 0, 0, 0.1);
 }
 
+.default-settings-btn {
+  color: #8a5a23;
+  background: linear-gradient(135deg, rgba(255, 249, 240, 0.95), rgba(246, 232, 205, 0.92));
+  border: 1px solid rgba(187, 129, 44, 0.18);
+  box-shadow:
+    0 8px 18px rgba(187, 129, 44, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.default-settings-btn:hover {
+  background: linear-gradient(135deg, rgba(255, 251, 245, 0.98), rgba(248, 236, 214, 0.96));
+  color: #754617;
+}
+
+.default-settings-btn:active {
+  background: linear-gradient(135deg, rgba(248, 236, 214, 0.98), rgba(240, 221, 188, 0.95));
+}
+
 .score-group {
   width: 100%;
   display: flex;
@@ -499,6 +617,14 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
 .new-game-btn:active {
   transform: scale(0.97);
   opacity: 0.9;
+}
+
+.default-action-btn {
+  background: linear-gradient(135deg, #d9a441 0%, #bb812c 52%, #9a6325 100%);
+  color: #fff8eb;
+  box-shadow:
+    0 12px 24px rgba(187, 129, 44, 0.22),
+    inset 0 1px 0 rgba(255, 245, 220, 0.24);
 }
 
 .grid-container {
@@ -587,7 +713,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
   align-items: center;
   justify-content: center;
   margin: 0 auto 16px;
-  font-size: 32px;
+  color: #7c5220;
+}
+
+.modal-icon svg {
+  width: 36px;
+  height: 36px;
 }
 
 .modal-won {
@@ -685,6 +816,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
 
 .deity-modal-icon {
   background: linear-gradient(135deg, rgba(245, 230, 184, 0.18), rgba(212, 168, 79, 0.3));
+  color: #fde68a;
+}
+
+.energy-modal-card {
+  background: linear-gradient(180deg, rgba(8, 15, 31, 0.98), rgba(15, 23, 42, 0.98));
+  border: 1px solid rgba(34, 211, 238, 0.18);
+}
+
+.energy-modal-icon {
+  color: #cffafe;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.22), rgba(37, 99, 235, 0.28));
 }
 
 .energy-theme {
@@ -710,5 +852,17 @@ onUnmounted(() => window.removeEventListener('keydown', handleKey))
 
 .energy-action-btn {
   box-shadow: 0 10px 28px rgba(6, 182, 212, 0.28);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
 }
 </style>
