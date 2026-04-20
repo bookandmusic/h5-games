@@ -1,20 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-import { useRouter } from 'vue-router'
-
 import { musicManager } from './musicManager'
 import { settingsStore } from './settingsStore'
 
-const router = useRouter()
-const GAME_ID = 'chinese-chess'
-
 const bgMusicEnabled = ref(true)
 const loaded = ref(false)
-
-const goBack = () => {
-  router.push(`/game/${GAME_ID}`)
-}
 
 const toggleBgMusic = () => {
   bgMusicEnabled.value = !bgMusicEnabled.value
@@ -50,10 +41,6 @@ onMounted(async () => {
         </div>
       </section>
     </div>
-
-    <footer class="settings-footer">
-      <button class="back-btn" @click="goBack">返回首页</button>
-    </footer>
   </div>
 </template>
 
@@ -172,27 +159,4 @@ onMounted(async () => {
   text-align: center;
 }
 
-.settings-footer {
-  flex-shrink: 0;
-  padding: 16px;
-  border-top: 1px solid rgba(201, 162, 39, 0.15);
-}
-
-.back-btn {
-  width: 100%;
-  border: none;
-  border-radius: 14px;
-  padding: 14px;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  background: linear-gradient(180deg, var(--accent-gold), #a68520);
-  color: #fff8e8;
-  box-shadow: 0 2px 8px rgba(201, 162, 39, 0.25);
-  transition: transform 150ms ease;
-}
-
-.back-btn:active {
-  transform: scale(0.97);
-}
 </style>

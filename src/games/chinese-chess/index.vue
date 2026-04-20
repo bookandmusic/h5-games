@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useRouter } from 'vue-router'
 
@@ -15,6 +15,7 @@ import {
   getWinner,
   isInCheck,
 } from './engine'
+import { clearChineseChessLeaveGuard, registerChineseChessLeaveGuard } from './leaveGuard'
 import { musicManager } from './musicManager'
 import { settingsStore } from './settingsStore'
 import type { Board, MatchConfig, MatchState, Move, Piece, PieceColor, Position } from './types'
@@ -42,6 +43,7 @@ let aiTimer: number | null = null
 const showSetupModal = ref(false)
 const showResultModal = ref(false)
 const showResignModal = ref(false)
+const showLeaveConfirmModal = ref(false)
 const setupMode = ref<'ai' | 'local'>('ai')
 const isRestartModal = ref(false)
 const draftConfig = ref<MatchConfig>({
@@ -64,8 +66,16 @@ const animatingMove = ref<{
   toPos: { x: number; y: number }
   phase: 'preview' | 'move'
 } | null>(null)
-// eslint-disable-next-line no-undef
+
 const boardFrameRef = ref<HTMLElement | null>(null)
+const resultPrimaryActionRef = ref<HTMLButtonElement | null>(null)
+const leavePrimaryActionRef = ref<HTMLButtonElement | null>(null)
+const prefersReducedMotion = ref(false)
+let reducedMotionMedia: MediaQueryList | null = null
+let pendingLeaveDecisionResolver: null | ((value: boolean) => void) = null
+const handleReducedMotionChange = (event: MediaQueryListEvent) => {
+  prefersReducedMotion.value = event.matches
+}
 
 const pieceImages: Record<string, string> = {
   red_general: new URL('./assets/imgs/red_general.png', import.meta.url).href,
@@ -109,6 +119,15 @@ const canUndo = computed(() => {
   return true
 })
 
+const isBoardLocked = computed(() => {
+  return (
+    winner.value !== null ||
+    thinking.value ||
+    canHumanAct() === false ||
+    animatingMove.value !== null
+  )
+})
+
 const inCheck = computed(() => {
   return winner.value === null && isInCheck(board.value, currentTurn.value)
 })
@@ -125,6 +144,91 @@ const statusLine = computed(() => {
     return turn + '行动 · ' + who + check
   }
   return turn + '行动' + check
+})
+
+const turnSummary = computed(() => {
+  const sideLabel = currentTurn.value === 'red' ? '红方' : '黑方'
+  if (winner.value !== null) {
+    return `对局结束，${winner.value === 'red' ? '红方' : '黑方'}获胜`
+  }
+  if (activeConfig.value.mode === 'ai') {
+    return currentTurn.value === activeConfig.value.humanSide
+      ? `${sideLabel}，轮到你走棋`
+      : `${sideLabel}，AI 正在走棋`
+  }
+  return `${sideLabel}，等待当前玩家操作`
+})
+
+const selectedPieceSummary = computed(() => {
+  if (!selected.value) return '未选中棋子'
+  const piece = board.value[selected.value.row][selected.value.col]
+  if (!piece) return '未选中棋子'
+  return `已选中${getPieceLabel(piece)}，可走${legalMoves.value.length}步`
+})
+
+const aiLockMessage = computed(() => {
+  if (!thinking.value) return ''
+  return 'AI 正在思考，棋盘暂时锁定'
+})
+
+const canOpenContextAction = computed(() => {
+  if (winner.value !== null) return false
+  if (thinking.value) return false
+  return activeConfig.value.mode === 'ai' || activeConfig.value.mode === 'local'
+})
+
+const canUseResultAction = computed(() => {
+  if (showResultModal.value) return false
+  if (activeConfig.value.mode === 'local' && winner.value === null) {
+    return !thinking.value
+  }
+  return winner.value !== null
+})
+
+const contextActionLabel = computed(() => {
+  if (activeConfig.value.mode === 'ai') return '认输'
+  return '重开'
+})
+
+const contextActionClass = computed(() => {
+  return activeConfig.value.mode === 'ai' ? 'resign' : 'restart'
+})
+
+const resultActionLabel = computed(() => {
+  if (activeConfig.value.mode === 'local' && winner.value === null) {
+    return '结束当前双人对局'
+  }
+  if (winner.value !== null) {
+    return '查看对局结果'
+  }
+  return '结果面板当前不可用'
+})
+
+const resultSummary = computed(() => {
+  const winnerLabel = winner.value === 'red' ? '红方' : '黑方'
+  const modeLabel = activeConfig.value.mode === 'ai' ? '人机对战' : '双人对战'
+  return `${winnerLabel}获胜 · ${modeLabel} · 第 ${moveCount.value} 手`
+})
+const draftSummary = computed(() => {
+  if (setupMode.value === 'local') {
+    return ['双人同屏', draftConfig.value.startingSide === 'red' ? '红方先手' : '黑方先手']
+  }
+
+  return [
+    draftConfig.value.difficulty === 'easy'
+      ? '简单'
+      : draftConfig.value.difficulty === 'medium'
+        ? '普通'
+        : '困难',
+    draftConfig.value.humanSide === 'red' ? '你执红方' : '你执黑方',
+    draftConfig.value.startingSide === 'red' ? '红方先手' : '黑方先手',
+  ]
+})
+const startActionLabel = computed(() => {
+  if (isRestartModal.value) {
+    return '确认重开'
+  }
+  return setupMode.value === 'ai' ? '开始人机对战' : '开始双人对局'
 })
 
 const setupModalTitle = computed(() => {
@@ -159,8 +263,51 @@ const isSelected = (position: Position) => {
   return selected.value?.row === position.row && selected.value?.col === position.col
 }
 
+const isLegalTarget = (position: Position) => {
+  return legalMoves.value.some(
+    (move) => move.to.row === position.row && move.to.col === position.col
+  )
+}
+
 const canHumanAct = () => {
   return activeConfig.value.mode === 'local' || currentTurn.value === activeConfig.value.humanSide
+}
+
+const getPositionLabel = (position: Position) => {
+  return `第${position.row + 1}行第${position.col + 1}列`
+}
+
+const isPointOperable = (position: Position) => {
+  if (isBoardLocked.value) return false
+  const piece = board.value[position.row][position.col]
+  if (isLegalTarget(position)) return true
+  if (piece && piece.color === currentTurn.value) return true
+  return false
+}
+
+const getPointAriaLabel = (position: Position) => {
+  const piece = board.value[position.row][position.col]
+  const states: string[] = [getPositionLabel(position)]
+
+  if (piece) {
+    states.push(getPieceLabel(piece))
+  } else {
+    states.push('空点位')
+  }
+
+  if (isSelected(position)) {
+    states.push('已选中')
+  }
+  if (isLegalTarget(position)) {
+    states.push('可落子')
+  }
+  if (thinking.value) {
+    states.push('AI 思考中，暂不可操作')
+  } else if (!isPointOperable(position)) {
+    states.push('当前不可操作')
+  }
+
+  return states.join('，')
 }
 
 const clearSelection = () => {
@@ -223,6 +370,12 @@ const getStateKey = () => {
 }
 
 const persistState = async () => {
+  if (activeConfig.value.mode === 'local') {
+    if (winner.value !== null) {
+      await gameStorage.clearGameState(GAME_ID + '-local')
+    }
+    return
+  }
   const state: MatchState = {
     board: board.value,
     currentTurn: currentTurn.value,
@@ -326,7 +479,11 @@ const startGame = async () => {
     config: { ...draftConfig.value },
     moveCount: 0,
   }
-  await gameStorage.saveGameState(stateKey, state)
+  if (setupMode.value === 'ai') {
+    await gameStorage.saveGameState(stateKey, state)
+  } else {
+    await gameStorage.clearGameState(GAME_ID + '-local')
+  }
   await gameStorage.clearGameState(GAME_ID + '-pending')
   showSetupModal.value = false
   isRestartModal.value = false
@@ -334,8 +491,8 @@ const startGame = async () => {
   loaded.value = true
 }
 
-const goHome = () => {
-  router.push(`/game/${GAME_ID}`)
+const goHome = async () => {
+  await router.push(`/game/${GAME_ID}`)
 }
 
 const commitMove = async (move: Move) => {
@@ -355,6 +512,15 @@ const openRestartModal = () => {
   showSetupModal.value = true
 }
 
+const handleContextAction = () => {
+  if (!canOpenContextAction.value) return
+  if (activeConfig.value.mode === 'ai') {
+    openResignModal()
+    return
+  }
+  openRestartModal()
+}
+
 const closeResultAndReview = () => {
   showResultModal.value = false
 }
@@ -365,6 +531,57 @@ const openRestartModalFromResult = () => {
   setupMode.value = activeConfig.value.mode
   isRestartModal.value = true
   showSetupModal.value = true
+}
+
+const resolveLeaveDecision = (shouldLeave: boolean) => {
+  pendingLeaveDecisionResolver?.(shouldLeave)
+  pendingLeaveDecisionResolver = null
+  showLeaveConfirmModal.value = false
+}
+
+const confirmLeaveAndSave = async () => {
+  await saveLocalMatchForResume()
+  resolveLeaveDecision(true)
+}
+
+const confirmLeaveWithoutSave = async () => {
+  await clearLocalResumeState()
+  resolveLeaveDecision(true)
+}
+
+const cancelLeave = () => {
+  resolveLeaveDecision(false)
+}
+
+const requestLeaveDecision = async () => {
+  if (pendingLeaveDecisionResolver) {
+    return false
+  }
+
+  showLeaveConfirmModal.value = true
+  await nextTick()
+  leavePrimaryActionRef.value?.focus()
+
+  return await new Promise<boolean>((resolve) => {
+    pendingLeaveDecisionResolver = resolve
+  })
+}
+
+const handleLeaveAttempt = async () => {
+  if (!shouldPromptToSaveLocalMatch()) {
+    return true
+  }
+
+  return await requestLeaveDecision()
+}
+
+const handleResultAction = () => {
+  if (!canUseResultAction.value) return
+  if (activeConfig.value.mode === 'local' && winner.value === null) {
+    void goHome()
+    return
+  }
+  showResultModal.value = true
 }
 
 const restoreFromState = (state: MatchState) => {
@@ -394,6 +611,9 @@ const restoreState = async () => {
     const saved = await gameStorage.loadGameState<MatchState>(stateKey)
     if (saved) {
       await gameStorage.clearGameState(GAME_ID + '-pending')
+      if (pending.mode === 'local' && pending.resume === false) {
+        await gameStorage.clearGameState(GAME_ID + '-local')
+      }
       restoreFromState(saved)
       loaded.value = true
       return
@@ -411,13 +631,37 @@ const restoreState = async () => {
   }
 
   const localState = await gameStorage.loadGameState<MatchState>(GAME_ID + '-local')
-  if (localState) {
+  if (localState && localState.winner === null) {
     restoreFromState(localState)
     loaded.value = true
     return
   }
 
+  if (localState && localState.winner !== null) {
+    await gameStorage.clearGameState(GAME_ID + '-local')
+  }
+
   router.replace(`/game/${GAME_ID}`)
+}
+
+const shouldPromptToSaveLocalMatch = () => {
+  return loaded.value && activeConfig.value.mode === 'local' && winner.value === null
+}
+
+const saveLocalMatchForResume = async () => {
+  const state: MatchState = {
+    board: board.value,
+    currentTurn: currentTurn.value,
+    winner: winner.value,
+    config: activeConfig.value,
+    moveCount: moveCount.value,
+  }
+  await gameStorage.saveGameState(GAME_ID + '-local', state)
+}
+
+const clearLocalResumeState = async () => {
+  await gameStorage.clearGameState(GAME_ID + '-local')
+  await gameStorage.clearGameState(GAME_ID + '-pending')
 }
 
 const handleSelect = (position: Position) => {
@@ -475,6 +719,11 @@ watch(isAiTurn, (value) => {
 
 onMounted(async () => {
   await settingsStore.load()
+  if (typeof window !== 'undefined' && 'matchMedia' in window) {
+    reducedMotionMedia = window.matchMedia('(prefers-reduced-motion: reduce)')
+    prefersReducedMotion.value = reducedMotionMedia.matches
+    reducedMotionMedia.addEventListener('change', handleReducedMotionChange)
+  }
   musicManager.play('02')
   await restoreState()
   if (loaded.value && isAiTurn.value) {
@@ -482,19 +731,68 @@ onMounted(async () => {
   }
 })
 
+watch(showResultModal, async (visible) => {
+  if (!visible) return
+  await nextTick()
+  resultPrimaryActionRef.value?.focus()
+})
+
+watch(
+  () => shouldPromptToSaveLocalMatch(),
+  (needsGuard) => {
+    if (needsGuard) {
+      registerChineseChessLeaveGuard(handleLeaveAttempt)
+      return
+    }
+    clearChineseChessLeaveGuard(handleLeaveAttempt)
+  },
+  { immediate: true }
+)
+
+watch(showResultModal, (visible) => {
+  if (visible) {
+    clearChineseChessLeaveGuard(handleLeaveAttempt)
+    return
+  }
+  if (shouldPromptToSaveLocalMatch()) {
+    registerChineseChessLeaveGuard(handleLeaveAttempt)
+  }
+})
+
+watch(showLeaveConfirmModal, async (visible) => {
+  if (!visible) return
+  await nextTick()
+  leavePrimaryActionRef.value?.focus()
+})
+
 onBeforeUnmount(() => {
   if (aiTimer !== null) {
     window.clearTimeout(aiTimer)
   }
+  pendingLeaveDecisionResolver?.(false)
+  pendingLeaveDecisionResolver = null
+  clearChineseChessLeaveGuard(handleLeaveAttempt)
+  reducedMotionMedia?.removeEventListener('change', handleReducedMotionChange)
 })
 </script>
 
 <template>
   <div v-if="loaded" class="game-page">
+    <div class="sr-only" aria-live="polite">
+      {{ statusLine }}。{{ selectedPieceSummary }}。{{ aiLockMessage }}
+    </div>
     <header class="game-bar">
-      <span class="status-text">{{ statusLine }}</span>
+      <div class="status-block">
+        <span class="status-text">{{ statusLine }}</span>
+        <span class="status-subtext">{{ turnSummary }} · {{ selectedPieceSummary }}</span>
+      </div>
       <div class="bar-actions">
-        <button v-if="canUndo" class="bar-btn undo" :disabled="!canUndo" @click="undoMove">
+        <button
+          class="bar-btn undo"
+          :disabled="!canUndo"
+          :aria-label="canUndo ? '悔棋' : '当前不可悔棋'"
+          @click="undoMove"
+        >
           <svg
             width="20"
             height="20"
@@ -512,26 +810,13 @@ onBeforeUnmount(() => {
           <span class="btn-label">悔棋</span>
         </button>
         <button
-          v-if="activeConfig.mode === 'ai' && winner === null"
-          class="bar-btn resign"
-          @click="openResignModal"
-        >
-          <svg
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            stroke-width="2"
-          >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          <span class="btn-label">认输</span>
-        </button>
-        <button
-          v-if="activeConfig.mode === 'local' && winner === null"
-          class="bar-btn restart"
-          @click="openRestartModal"
+          class="bar-btn"
+          :class="contextActionClass"
+          :disabled="!canOpenContextAction"
+          :aria-label="
+            canOpenContextAction ? contextActionLabel : `${contextActionLabel}当前不可用`
+          "
+          @click="handleContextAction"
         >
           <svg
             width="20"
@@ -542,17 +827,25 @@ onBeforeUnmount(() => {
             stroke-width="2"
           >
             <path
+              v-if="activeConfig.mode === 'ai'"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+            <path
+              v-else
               stroke-linecap="round"
               stroke-linejoin="round"
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          <span class="btn-label">重开</span>
+          <span class="btn-label">{{ contextActionLabel }}</span>
         </button>
         <button
-          v-if="winner !== null && !showResultModal"
           class="bar-btn result"
-          @click="showResultModal = true"
+          :disabled="!canUseResultAction"
+          :aria-label="resultActionLabel"
+          @click="handleResultAction"
         >
           <svg
             width="20"
@@ -575,7 +868,15 @@ onBeforeUnmount(() => {
 
     <section class="board-section">
       <div class="board-wrap">
-        <div class="board-frame" ref="boardFrameRef">
+        <div
+          class="board-frame"
+          :class="{ locked: isBoardLocked, thinking: thinking }"
+          ref="boardFrameRef"
+          role="group"
+          aria-label="中国象棋棋盘"
+          :aria-describedby="'board-helper'"
+          :aria-busy="thinking"
+        >
           <div class="board-lines">
             <svg class="lines-svg" viewBox="0 0 8 9" preserveAspectRatio="none">
               <defs>
@@ -609,12 +910,12 @@ onBeforeUnmount(() => {
                   class="point"
                   :class="{
                     selected: isSelected(getActualPosition(displayRow, displayCol)),
-                    target: legalMoves.some(
-                      (move) =>
-                        move.to.row === getActualPosition(displayRow, displayCol).row &&
-                        move.to.col === getActualPosition(displayRow, displayCol).col
-                    ),
+                    target: isLegalTarget(getActualPosition(displayRow, displayCol)),
                   }"
+                  :disabled="isBoardLocked"
+                  :aria-label="getPointAriaLabel(getActualPosition(displayRow, displayCol))"
+                  :aria-pressed="isSelected(getActualPosition(displayRow, displayCol))"
+                  :aria-disabled="!isPointOperable(getActualPosition(displayRow, displayCol))"
                   :style="{
                     left: `calc(${(displayCol / 8) * 100}% - var(--piece-size) / 2)`,
                     top: `calc(${(displayRow / 9) * 100}% - var(--piece-size) / 2)`,
@@ -635,6 +936,12 @@ onBeforeUnmount(() => {
                 </button>
               </template>
             </template>
+          </div>
+          <div v-if="thinking" class="board-lock-overlay" aria-hidden="true">
+            <div class="board-lock-card" :class="{ reduced: prefersReducedMotion }">
+              <span class="lock-dot"></span>
+              <span class="lock-text">AI 思考中，请稍候</span>
+            </div>
           </div>
           <div
             v-if="animatingMove && animatingMove.phase === 'move'"
@@ -657,7 +964,16 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <div v-if="animatingMove && animatingMove.phase === 'preview'" class="attack-preview-overlay">
+    <p id="board-helper" class="board-helper">
+      {{ turnSummary }}。{{ selectedPieceSummary }}。
+      <span v-if="thinking">AI 思考期间棋盘会锁定。</span>
+    </p>
+
+    <div
+      v-if="animatingMove && animatingMove.phase === 'preview'"
+      class="attack-preview-overlay"
+      :class="{ reduced: prefersReducedMotion }"
+    >
       <div class="attack-preview-piece" :class="animatingMove.piece.color">
         <img
           class="attack-preview-image"
@@ -668,10 +984,16 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="showSetupModal" class="modal-overlay" @click.self="closeSetupModal">
-      <div class="setup-modal">
+      <div
+        class="setup-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="setup-modal-title"
+        aria-describedby="setup-modal-desc"
+      >
         <header class="modal-header">
-          <h2 class="modal-title">{{ setupModalTitle }}</h2>
-          <button class="modal-close" @click="closeSetupModal">
+          <h2 id="setup-modal-title" class="modal-title">{{ setupModalTitle }}</h2>
+          <button class="modal-close" aria-label="关闭开局设置" @click="closeSetupModal">
             <svg
               width="20"
               height="20"
@@ -686,12 +1008,23 @@ onBeforeUnmount(() => {
         </header>
 
         <div class="modal-body">
+          <p id="setup-modal-desc" class="modal-intro">
+            {{ setupMode === 'ai' ? '调整难度、执子方与先手方。' : '确认先手方后立即开始新棋局。' }}
+          </p>
+          <div class="setup-summary-card">
+            <span class="summary-label">当前配置</span>
+            <div class="summary-chips">
+              <span v-for="item in draftSummary" :key="item" class="summary-chip">{{ item }}</span>
+            </div>
+          </div>
           <section v-if="setupMode === 'ai'" class="settings-section">
             <h3 class="section-title">难度等级</h3>
+            <p class="section-note">只在人机模式下显示，难度越高 AI 预计思考更久。</p>
             <div class="option-grid three-col">
               <button
                 class="option-btn compact"
                 :class="{ active: draftConfig.difficulty === 'easy' }"
+                :aria-pressed="draftConfig.difficulty === 'easy'"
                 @click="draftConfig.difficulty = 'easy'"
               >
                 <span class="option-label">简单</span>
@@ -699,6 +1032,7 @@ onBeforeUnmount(() => {
               <button
                 class="option-btn compact"
                 :class="{ active: draftConfig.difficulty === 'medium' }"
+                :aria-pressed="draftConfig.difficulty === 'medium'"
                 @click="draftConfig.difficulty = 'medium'"
               >
                 <span class="option-label">普通</span>
@@ -706,6 +1040,7 @@ onBeforeUnmount(() => {
               <button
                 class="option-btn compact"
                 :class="{ active: draftConfig.difficulty === 'hard' }"
+                :aria-pressed="draftConfig.difficulty === 'hard'"
                 @click="draftConfig.difficulty = 'hard'"
               >
                 <span class="option-label">困难</span>
@@ -715,10 +1050,12 @@ onBeforeUnmount(() => {
 
           <section v-if="setupMode === 'ai'" class="settings-section">
             <h3 class="section-title">执子方</h3>
+            <p class="section-note">选择你控制的阵营，棋盘会自动调整为对应视角。</p>
             <div class="option-grid two-col">
               <button
                 class="option-btn"
                 :class="{ active: draftConfig.humanSide === 'red' }"
+                :aria-pressed="draftConfig.humanSide === 'red'"
                 @click="draftConfig.humanSide = 'red'"
               >
                 <span class="option-label red">红方</span>
@@ -726,6 +1063,7 @@ onBeforeUnmount(() => {
               <button
                 class="option-btn"
                 :class="{ active: draftConfig.humanSide === 'black' }"
+                :aria-pressed="draftConfig.humanSide === 'black'"
                 @click="draftConfig.humanSide = 'black'"
               >
                 <span class="option-label black">黑方</span>
@@ -735,10 +1073,12 @@ onBeforeUnmount(() => {
 
           <section class="settings-section">
             <h3 class="section-title">先手方</h3>
+            <p class="section-note">先手会直接影响第一回合行动顺序。</p>
             <div class="option-grid two-col">
               <button
                 class="option-btn"
                 :class="{ active: draftConfig.startingSide === 'red' }"
+                :aria-pressed="draftConfig.startingSide === 'red'"
                 @click="draftConfig.startingSide = 'red'"
               >
                 <span class="option-label red">红方先手</span>
@@ -746,6 +1086,7 @@ onBeforeUnmount(() => {
               <button
                 class="option-btn"
                 :class="{ active: draftConfig.startingSide === 'black' }"
+                :aria-pressed="draftConfig.startingSide === 'black'"
                 @click="draftConfig.startingSide = 'black'"
               >
                 <span class="option-label black">黑方先手</span>
@@ -756,14 +1097,19 @@ onBeforeUnmount(() => {
 
         <footer class="modal-footer">
           <button class="modal-btn secondary" @click="closeSetupModal">取消</button>
-          <button class="modal-btn primary" @click="startGame">开始游戏</button>
+          <button class="modal-btn primary" @click="startGame">{{ startActionLabel }}</button>
         </footer>
       </div>
     </div>
 
     <div v-if="showResignModal" class="modal-overlay" @click.self="showResignModal = false">
-      <div class="confirm-modal">
-        <h2 class="confirm-title">确认认输</h2>
+      <div
+        class="confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="resign-modal-title"
+      >
+        <h2 id="resign-modal-title" class="confirm-title">确认认输</h2>
         <p class="confirm-desc">认输后将结束本局游戏</p>
         <div class="confirm-actions">
           <button class="modal-btn secondary" @click="showResignModal = false">取消</button>
@@ -772,29 +1118,58 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-if="showResultModal" class="result-overlay" role="dialog" aria-modal="true">
-      <div class="result-card">
-        <h2 class="result-title">{{ winner === 'red' ? '红方获胜' : '黑方获胜' }}</h2>
-        <p class="result-sub">第 {{ moveCount }} 手</p>
-        <div class="result-actions">
-          <button class="result-btn home" @click="goHome">
-            <svg
-              width="16"
-              height="16"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-              />
-            </svg>
-            <span>结束游戏</span>
+    <div v-if="showLeaveConfirmModal" class="modal-overlay" @click.self="cancelLeave">
+      <div
+        class="confirm-modal leave-confirm-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leave-modal-title"
+        aria-describedby="leave-modal-desc"
+      >
+        <h2 id="leave-modal-title" class="confirm-title leave-title">离开当前对局</h2>
+        <p id="leave-modal-desc" class="confirm-desc">
+          当前是双人对战，离开前是否保存这盘棋局，方便稍后继续？
+        </p>
+        <div class="leave-summary-card">
+          <span class="summary-label">当前进度</span>
+          <div class="summary-chips">
+            <span class="summary-chip">第 {{ moveCount }} 手</span>
+            <span class="summary-chip">{{ currentTurn === 'red' ? '轮到红方' : '轮到黑方' }}</span>
+          </div>
+        </div>
+        <div class="leave-actions">
+          <button class="modal-btn secondary" @click="cancelLeave">取消</button>
+          <button class="modal-btn ghost" @click="confirmLeaveWithoutSave">不保存</button>
+          <button
+            ref="leavePrimaryActionRef"
+            class="modal-btn primary"
+            @click="confirmLeaveAndSave"
+          >
+            保存并退出
           </button>
-          <button class="result-btn restart" @click="openRestartModalFromResult">
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="showResultModal"
+      class="result-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="result-modal-title"
+      aria-describedby="result-modal-desc"
+    >
+      <div class="result-card">
+        <h2 id="result-modal-title" class="result-title">
+          {{ winner === 'red' ? '红方获胜' : '黑方获胜' }}
+        </h2>
+        <p id="result-modal-desc" class="result-sub">{{ resultSummary }}</p>
+        <div class="result-actions">
+          <button
+            ref="resultPrimaryActionRef"
+            class="result-btn restart"
+            @click="openRestartModalFromResult"
+          >
             <svg
               width="16"
               height="16"
@@ -832,6 +1207,23 @@ onBeforeUnmount(() => {
               />
             </svg>
             <span>查看残局</span>
+          </button>
+          <button class="result-btn home" @click="goHome">
+            <svg
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+              />
+            </svg>
+            <span>结束游戏</span>
           </button>
         </div>
       </div>
@@ -874,10 +1266,23 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid rgba(201, 162, 39, 0.15);
 }
 
+.status-block {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .status-text {
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+.status-subtext {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .bar-actions {
@@ -888,6 +1293,7 @@ onBeforeUnmount(() => {
 .bar-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 8px 12px;
   border: 1px solid rgba(201, 162, 39, 0.2);
@@ -907,7 +1313,7 @@ onBeforeUnmount(() => {
   border-color: rgba(201, 162, 39, 0.35);
 }
 
-.bar-btn.undo:disabled {
+.bar-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
@@ -931,6 +1337,14 @@ onBeforeUnmount(() => {
 .btn-label {
   font-size: 13px;
   font-weight: 600;
+  line-height: 1;
+}
+
+.bar-btn svg,
+.result-btn svg,
+.modal-close svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .board-section {
@@ -973,6 +1387,12 @@ onBeforeUnmount(() => {
       rgba(139, 90, 43, 0.03) 2px,
       rgba(139, 90, 43, 0.03) 4px
     );
+}
+
+.board-frame.locked {
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.45),
+    inset 0 0 0 1px rgba(201, 162, 39, 0.14);
 }
 
 .board-lines {
@@ -1024,6 +1444,10 @@ onBeforeUnmount(() => {
   transform: scale(0.96);
 }
 
+.point:disabled {
+  cursor: not-allowed;
+}
+
 .point.selected {
   background: rgba(201, 162, 39, 0.2);
 }
@@ -1036,6 +1460,55 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: rgba(185, 28, 28, 0.4);
   box-shadow: 0 0 4px rgba(185, 28, 28, 0.3);
+}
+
+.board-lock-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 22px;
+  z-index: 8;
+  pointer-events: none;
+}
+
+.board-lock-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgba(45, 24, 16, 0.92);
+  border: 1px solid rgba(201, 162, 39, 0.28);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+.lock-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  animation: pulse-dot 1.1s ease-in-out infinite;
+}
+
+.lock-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff3d3;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 
 .piece {
@@ -1212,12 +1685,15 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  box-sizing: border-box;
+  min-height: 100dvh;
+  overflow-y: auto;
   z-index: 100;
 }
 
 .setup-modal {
   width: min(100%, 340px);
-  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   border-radius: 20px;
   border: 2px solid rgba(201, 162, 39, 0.25);
   background:
@@ -1268,10 +1744,52 @@ onBeforeUnmount(() => {
   gap: 14px;
 }
 
+.modal-intro {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
 .settings-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.setup-summary-card {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(201, 162, 39, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.16);
+}
+
+.summary-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent-gold);
+}
+
+.summary-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summary-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(61, 37, 24, 0.92);
+  border: 1px solid rgba(201, 162, 39, 0.2);
+  color: #f5e6d3;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .section-title {
@@ -1279,6 +1797,13 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.section-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(168, 146, 122, 0.92);
 }
 
 .option-grid {
@@ -1350,6 +1875,9 @@ onBeforeUnmount(() => {
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition:
     transform 150ms ease,
     background 150ms ease;
@@ -1376,6 +1904,12 @@ onBeforeUnmount(() => {
   color: #fff8e8;
 }
 
+.modal-btn.ghost {
+  background: rgba(245, 230, 211, 0.08);
+  border: 1px solid rgba(245, 230, 211, 0.14);
+  color: var(--text-primary);
+}
+
 .confirm-modal {
   width: min(100%, 280px);
   border-radius: 20px;
@@ -1388,11 +1922,24 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
+.leave-confirm-modal {
+  width: min(100%, 360px);
+  border-color: rgba(201, 162, 39, 0.25);
+  background:
+    linear-gradient(180deg, rgba(61, 37, 24, 0.98), rgba(45, 24, 16, 0.98)),
+    radial-gradient(ellipse at 50% 0%, rgba(201, 162, 39, 0.12), transparent 60%);
+  text-align: left;
+}
+
 .confirm-title {
   margin: 0 0 8px;
   font-size: 18px;
   font-weight: 700;
   color: var(--accent-red);
+}
+
+.leave-title {
+  color: var(--accent-gold);
 }
 
 .confirm-desc {
@@ -1404,6 +1951,20 @@ onBeforeUnmount(() => {
 .confirm-actions {
   display: flex;
   gap: 12px;
+}
+
+.leave-summary-card {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(201, 162, 39, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.16);
+}
+
+.leave-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .result-overlay {
@@ -1487,6 +2048,36 @@ onBeforeUnmount(() => {
   color: var(--text-secondary);
 }
 
+.board-helper,
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animating-piece,
+  .attack-preview-overlay,
+  .attack-preview-piece,
+  .lock-dot {
+    animation: none !important;
+  }
+
+  .bar-btn,
+  .point,
+  .piece,
+  .modal-btn,
+  .result-btn {
+    transition: none;
+  }
+}
+
 @media (max-width: 600px) {
   .board-frame {
     --piece-size: min(10vw, 9vh, 42px);
@@ -1505,6 +2096,8 @@ onBeforeUnmount(() => {
 
   .game-bar {
     padding: 8px 12px;
+    align-items: flex-start;
+    gap: 10px;
   }
 
   .bar-btn {
@@ -1515,12 +2108,31 @@ onBeforeUnmount(() => {
     font-size: 12px;
   }
 
+  .bar-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+
+  .game-bar {
+    flex-direction: column;
+  }
+
+  .status-block {
+    width: 100%;
+  }
+
   .setup-modal {
     width: min(100%, 300px);
   }
 
   .modal-body {
     padding: 12px 16px;
+  }
+
+  .leave-actions {
+    grid-template-columns: 1fr;
   }
 
   .result-card {
