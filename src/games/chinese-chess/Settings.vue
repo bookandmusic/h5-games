@@ -158,5 +158,4 @@ onMounted(async () => {
   color: var(--text-secondary);
   text-align: center;
 }
-
 </style>

@@ -76,9 +76,9 @@ export const evaluateBoard = (board: Board, perspective: PieceColor) => {
 
       const key = `${rowIndex},${colIndex}`
       const defenders =
-        piece.color === perspective ? ownAttackMap.get(key) ?? 0 : oppAttackMap.get(key) ?? 0
+        piece.color === perspective ? (ownAttackMap.get(key) ?? 0) : (oppAttackMap.get(key) ?? 0)
       const attackers =
-        piece.color === perspective ? oppAttackMap.get(key) ?? 0 : ownAttackMap.get(key) ?? 0
+        piece.color === perspective ? (oppAttackMap.get(key) ?? 0) : (ownAttackMap.get(key) ?? 0)
 
       if (attackers > 0) {
         const dangerBase = Math.floor(pieceValues[piece.type] * (defenders > 0 ? 0.16 : 0.36))
@@ -174,7 +174,8 @@ const assessMove = (board: Board, color: PieceColor, move: Move): MoveAssessment
   const progressBonus = moveHeuristic(move)
   const replyThreat = getImmediateReplyThreat(nextBoard, color)
   const movedPieceThreat = getMovedPieceThreat(nextBoard, color, move.to)
-  const movedPieceRisk = movedPieceThreat > 0 ? movedPieceThreat + Math.floor(pieceValues[move.piece.type] * 0.4) : 0
+  const movedPieceRisk =
+    movedPieceThreat > 0 ? movedPieceThreat + Math.floor(pieceValues[move.piece.type] * 0.4) : 0
   const blunderPenalty = replyThreat + movedPieceRisk
 
   return {
@@ -205,7 +206,9 @@ const buildCandidatePool = (board: Board, color: PieceColor, moves: Move[]) => {
     ]
   }
 
-  const assessments = moves.map((move) => assessMove(board, color, move)).sort((a, b) => b.score - a.score)
+  const assessments = moves
+    .map((move) => assessMove(board, color, move))
+    .sort((a, b) => b.score - a.score)
   const safeMoves = assessments.filter((item) => !item.immediateLoss)
 
   if (safeMoves.length > 0) {
