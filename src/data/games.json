@@ -14,5 +14,13 @@
     "description": "支持人机与双人对战，可选难度、执红执黑与先后手",
     "icon": "/assets/games/chinese-chess.png",
     "route": "/game/chinese-chess"
+  },
+  {
+    "id": "campus-journey",
+    "name": "人生之旅",
+    "category": "养成",
+    "description": "从高中一路推进到经营阶段的成长路线放置游戏，包含考试分支、冲刺与图鉴补完",
+    "icon": "/assets/games/campus-journey.png",
+    "route": "/game/campus-journey"
   }
 ]

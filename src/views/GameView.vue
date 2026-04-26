@@ -19,6 +19,7 @@ const gameThemeClass = computed(() => {
   }
   const themeMap: Record<string, string> = {
     'chinese-chess': 'theme-chinese-chess',
+    'campus-journey': 'theme-campus-journey',
   }
   return themeMap[gameId.value] || 'theme-cyber'
 })
@@ -30,6 +31,7 @@ const homeComponents: Record<string, Component> = {
 const playComponents: Record<string, Component> = {
   '2048': defineAsyncComponent(() => import('../games/game2048/index.vue')),
   'chinese-chess': defineAsyncComponent(() => import('../games/chinese-chess/index.vue')),
+  'campus-journey': defineAsyncComponent(() => import('../games/campus-journey/index.vue')),
 }
 
 const settingsComponents: Record<string, Component> = {
@@ -68,6 +70,7 @@ const pageTitle = computed(() => {
   const gameNames: Record<string, string> = {
     '2048': '2048',
     'chinese-chess': '中国象棋',
+    'campus-journey': '人生之旅',
   }
   const baseTitle = gameNames[gameId.value] || ''
   if (!baseTitle) return ''
@@ -77,13 +80,25 @@ const pageTitle = computed(() => {
   return baseTitle
 })
 
+const backLabel = computed(() => {
+  if (gameId.value === 'campus-journey') return '返回'
+  return 'BACK'
+})
+
 const shouldRunChineseChessLeaveGuard = () => {
   return gameId.value === 'chinese-chess' && isPlay.value
 }
 
-const shouldConfirmLeavingChineseChessPlay = (to: { path: string }, from: { path: string; params: Record<string, unknown> }) => {
+const shouldConfirmLeavingChineseChessPlay = (
+  to: { path: string },
+  from: { path: string; params: Record<string, unknown> }
+) => {
   const fromId = typeof from.params.id === 'string' ? from.params.id : ''
-  return fromId === 'chinese-chess' && String(from.path).includes('/play') && !String(to.path).includes('/play')
+  return (
+    fromId === 'chinese-chess' &&
+    String(from.path).includes('/play') &&
+    !String(to.path).includes('/play')
+  )
 }
 
 const goBack = async () => {
@@ -156,7 +171,7 @@ if (!GameComponent.value && gameId.value) {
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
-        <span class="cyber-back-text">BACK</span>
+        <span class="cyber-back-text">{{ backLabel }}</span>
       </button>
       <div v-if="pageTitle" class="cyber-header-title-wrapper">
         <span class="cyber-header-title">{{ pageTitle }}</span>
@@ -331,6 +346,48 @@ if (!GameComponent.value && gameId.value) {
   --game-back-font: 'Noto Serif SC', 'STSong', serif;
 }
 
+.cyber-game-page.theme-campus-journey {
+  --game-page-bg:
+    radial-gradient(circle at top left, rgba(244, 143, 177, 0.18), transparent 24%),
+    radial-gradient(circle at top right, rgba(248, 187, 208, 0.14), transparent 28%),
+    linear-gradient(180deg, #fff8fb 0%, #fdf0f5 52%, #f8e4ec 100%);
+  --game-grid-line: rgba(233, 108, 152, 0.03);
+  --game-grid-line-alt: rgba(255, 255, 255, 0.16);
+  --game-header-bg: rgba(255, 248, 251, 0.82);
+  --game-header-border: rgba(233, 108, 152, 0.14);
+  --game-back-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(253, 237, 243, 0.9));
+  --game-back-border: rgba(247, 191, 211, 0.9);
+  --game-back-bg-hover: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.98),
+    rgba(250, 225, 235, 0.94)
+  );
+  --game-back-border-hover: rgba(233, 108, 152, 0.42);
+  --game-back-bg-active: linear-gradient(
+    180deg,
+    rgba(252, 232, 240, 0.96),
+    rgba(247, 191, 211, 0.9)
+  );
+  --game-back-shadow-hover:
+    0 10px 24px rgba(190, 114, 145, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --game-back-glow: radial-gradient(
+    circle at center,
+    rgba(244, 143, 177, 0.24) 0%,
+    transparent 72%
+  );
+  --game-back-color: #8b4b67;
+  --game-title-color: #8b4b67;
+  --game-header-divider: linear-gradient(
+    90deg,
+    transparent,
+    rgba(233, 108, 152, 0.24),
+    rgba(247, 191, 211, 0.22),
+    transparent
+  );
+  --game-title-font: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --game-back-font: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
 .cyber-bg-grid {
   position: absolute;
   inset: 0;
@@ -448,6 +505,38 @@ if (!GameComponent.value && gameId.value) {
   background: var(--game-header-divider);
 }
 
+.theme-campus-journey .cyber-game-header {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 10px 24px rgba(177, 102, 134, 0.08);
+}
+
+.theme-campus-journey .cyber-back-btn {
+  gap: 8px;
+  padding: 9px 16px;
+  margin-left: 0;
+  border-width: 2px;
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.theme-campus-journey .cyber-back-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.theme-campus-journey .cyber-back-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.theme-campus-journey .cyber-header-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
 .cyber-game-content {
   flex: 1;
   overflow-y: auto;
@@ -455,6 +544,9 @@ if (!GameComponent.value && gameId.value) {
   flex-direction: column;
   position: relative;
   z-index: 5;
+}
+.theme-campus-journey .cyber-game-content {
+  overflow: hidden;
 }
 
 .cyber-empty-page {
