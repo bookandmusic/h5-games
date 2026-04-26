@@ -169,7 +169,11 @@ const updateTheme = async (t: Theme) => {
   --settings-surface-border: rgba(34, 211, 238, 0.16);
   --settings-card-border: rgba(34, 211, 238, 0.14);
   --settings-card-press: rgba(34, 211, 238, 0.08);
-  --settings-card-active: linear-gradient(90deg, rgba(34, 211, 238, 0.12), rgba(59, 130, 246, 0.12));
+  --settings-card-active: linear-gradient(
+    90deg,
+    rgba(34, 211, 238, 0.12),
+    rgba(59, 130, 246, 0.12)
+  );
   --settings-label: #e0f2fe;
   --settings-desc: rgba(186, 230, 253, 0.72);
   --settings-check: #67e8f9;
