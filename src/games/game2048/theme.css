@@ -1,0 +1,32 @@
+.theme-2048-surface {
+  background:
+    linear-gradient(rgba(126, 91, 62, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    radial-gradient(circle at 52% 43%, rgba(255, 255, 255, 0.64) 0%, transparent 18%),
+    conic-gradient(
+      from 206deg at 52% 43%,
+      rgba(255, 255, 255, 0.48) 0deg 22deg,
+      rgba(239, 169, 102, 0.16) 22deg 56deg,
+      rgba(255, 255, 255, 0.42) 56deg 96deg,
+      rgba(238, 153, 83, 0.18) 96deg 136deg,
+      rgba(255, 255, 255, 0.5) 136deg 178deg,
+      rgba(239, 176, 98, 0.2) 178deg 224deg,
+      rgba(255, 255, 255, 0.46) 224deg 270deg,
+      rgba(230, 146, 86, 0.16) 270deg 318deg,
+      rgba(255, 255, 255, 0.5) 318deg 360deg
+    ),
+    radial-gradient(
+      ellipse at 48% 30%,
+      rgba(255, 248, 232, 0.78) 0%,
+      rgba(255, 226, 186, 0.32) 48%,
+      transparent 70%
+    ),
+    linear-gradient(180deg, #fbf4e9 0%, #f8dfbd 100%);
+  background-size:
+    14px 14px,
+    14px 14px,
+    auto,
+    auto,
+    auto,
+    auto;
+}
