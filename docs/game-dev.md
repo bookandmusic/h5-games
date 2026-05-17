@@ -239,20 +239,32 @@ el.addEventListener('pointerup', onPointerUp)
 
 > 安全区域加在**外层容器**（`.play-page`），而不是内层内容容器。内层宽高比约束层的 padding 会破坏布局计算。
 
-### 4. 游戏首页标题去重
+### 4. 游戏首页设计
 
-游戏首页（`Home.vue` / idle 页面）**不应直接显示游戏标题**，建议使用 logo/图标作为视觉主体：
+游戏首页（`Home.vue` / idle 页面）**不需要顶部导航栏/返回栏**。视觉主体推荐使用 logo/图标/特色元素，标题文字可选：
 
 ```html
-<!-- 错误：标题重复 -->
-<h1>中国象棋</h1>
-
-<!-- 正确：用 logo/图标 作为视觉主体 -->
+<!-- 方式一：用 logo/图标作为视觉主体（推荐） -->
 <div class="game-logo">
   <div class="logo-piece red">帥</div>
   <div class="logo-piece black">將</div>
 </div>
+
+<!-- 方式二：2048 风格，用游戏元素做 logo -->
+<div class="logo-lockup">
+  <div class="logo-row">
+    <div class="logo-tile">2</div>
+    <div class="logo-tile">0</div>
+    <div class="logo-tile">4</div>
+    <div class="logo-tile">8</div>
+  </div>
+</div>
+
+<!-- 方式三：标题文字 + 图标组合（合理设计即可） -->
+<h1 class="game-title">游戏名称</h1>
 ```
+
+> 退出按钮必须融合游戏自身视觉风格，见下方「退出功能」章节。
 
 ### 5. 游戏生命周期注册（可选）
 
