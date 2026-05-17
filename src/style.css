@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+:root {
+  --accent: #b08ad7;
+  --accent-light: #d6c0f0;
+
+  --bg-primary: #e0d6f7;
+  --bg-secondary: #ede6f9;
+  --bg-gradient-start: #e0d6f7;
+  --bg-gradient-end: #ebe2f8;
+
+  --text-primary: #3d2e5c;
+  --text-secondary: #7a6a94;
+  --text-tertiary: #b0a3c4;
+
+  --wood: #d2b48c;
+  --wood-light: #e0c8a4;
+  --wood-dark: #c4a67c;
+
+  --border: rgba(61, 46, 92, 0.1);
+
+  --radius-md: 14px;
+  --radius-xl: 28px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  background: var(--bg-gradient-start);
+  color: var(--text-primary);
+  font-size: 17px;
+  line-height: 1.47;
+  overscroll-behavior: none;
+  overflow: hidden;
+  touch-action: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+}
+::-webkit-scrollbar {
+  display: none;
+}
+
+.game-page-container {
+  box-sizing: border-box;
+}
