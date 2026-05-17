@@ -1,68 +1,88 @@
 # YiKe
 
-手机游戏 App，技术栈：Vue 3 + Vite + Tauri 2 + Tailwind CSS 4
+> 跨平台手机游戏 App，支持 Windows / macOS / Linux / Android
 
-## 功能
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Vue](https://img.shields.io/badge/Vue-3-green.svg)](https://vuejs.org/)
+[![Tauri](https://img.shields.io/badge/Tauri-2-FFC131.svg)](https://tauri.app/)
 
-- 游戏列表：iOS App Store 风格界面，支持分类筛选和搜索
-- 游戏模块：每个游戏独立运行，完全隔离
-- 已包含游戏：2048
+## ✨ 特性
 
-## 开发
+- 🎮 **游戏隔离架构** — 每个游戏自包含状态、逻辑、资源，互不干扰
+- 📱 **跨平台** — 一套代码，桌面端 + 移动端全覆盖
+- 🎨 **自定义主题** — 紫色主题，现代化 UI 设计
+- 🔍 **智能搜索** — 分类筛选 + 标题搜索，快速找到想玩的游戏
+- 💾 **自动存档** — 游戏进度自动保存，随时继续
+- 🖱️ **统一交互** — Pointer Events 同时支持触摸屏和鼠标
+
+## 🚀 快速开始
+
+### 环境要求
+
+- Node.js >= 24
+- npm >= 10
+- Rust（仅桌面端构建需要）
+
+### 安装与运行
 
 ```bash
+# 克隆项目
+git clone https://github.com/your-org/h5-games.git
+cd h5-games
+
 # 安装依赖
 npm install
 
-# 前端开发
+# 启动开发服务器
 npm run dev
-
-# Tauri 完整应用开发
-npm run tauri:dev
-
-# 类型检查
-npm run type-check
-
-# 代码检查
-npm run lint
-
-# 格式化
-npm run format
 ```
 
-## 构建
+浏览器打开 `http://localhost:5173` 即可体验。
+
+### 构建应用
 
 ```bash
 # 构建前端
 npm run build
 
-# 构建完整应用（生成安装包）
+# 构建桌面应用（Windows/macOS/Linux）
 npm run tauri:build
+
+# 构建 Android APK
+npm run tauri android build
 ```
 
-## 添加新游戏
+## 🎮 游戏列表
 
-1. 在 `src/games/` 下创建新目录
-2. 创建 `index.vue` 作为游戏入口组件
-3. 在 `src/data/games.json` 中添加游戏元数据
-4. 在 `src/views/GameView.vue` 的 `gameComponents` 中注册组件映射
+| 游戏 | 分类 | 简介 |
+|------|------|------|
+| 2048 | 益智 | 经典数字合成，合并相同数字达到 2048 |
+| 中国象棋 | 棋类 | 支持人机对战与双人对战，可选难度 |
+| 记忆翻牌 | 益智 | 多主题翻牌配对，挑战记忆力 |
+| 星际捕手 | 益智 | 收集星辰宝石，躲避陨石，挑战连击 |
 
-## 项目结构
+## 🏗️ 技术架构
 
-```
-src/
-├── main.ts              # 应用入口
-├── App.vue              # 根组件
-├── components/          # 公共组件
-├── views/               # 页面视图
-├── games/               # 游戏模块（独立）
-├── data/                # 游戏列表数据
-├── router/              # 路由配置
-├── stores/              # Pinia 状态管理
-├── types/               # TypeScript 类型
-src-tauri/               # Tauri 后端（Rust）
-```
+**前端**：Vue 3 + TypeScript + Vite + Pinia + Tailwind CSS 4
 
-## 许可证
+**跨平台**：Tauri 2（桌面端）/ Gradle（Android）
+
+**游戏模块**：每个游戏位于 `src/games/<game-id>/`，通过 `import.meta.glob` 自动发现和加载，无需手动注册。
+
+详细技术文档：
+- [开发指南](docs/game-dev.md) — 容器布局、Container Queries、添加新游戏流程
+- [AGENTS.md](AGENTS.md) — 常用命令、代码规范、Git 工作流
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+1. Fork 本仓库
+2. 创建特性分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'feat: add amazing feature'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 提交 Pull Request
+
+## 📄 许可证
 
 MIT
