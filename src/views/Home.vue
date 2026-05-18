@@ -195,7 +195,8 @@ const hasResults = computed(() => store.filteredGames.length > 0)
   margin-inline: auto;
   display: flex;
   align-items: center;
-  padding: 6px 16px;
+  padding: 0 16px 6px;
+  padding-top: max(6px, env(safe-area-inset-top));
   gap: 8px;
 }
 

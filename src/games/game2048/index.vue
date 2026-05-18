@@ -684,7 +684,8 @@ onUnmounted(() => {
   justify-content: space-between;
   width: 100%;
   gap: 18px;
-  padding: 4px 0 18px;
+  padding: 0 0 18px;
+  padding-top: max(4px, env(safe-area-inset-top));
 }
 
 .title-lockup {

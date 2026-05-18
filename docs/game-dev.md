@@ -64,8 +64,8 @@ src/games/<game-id>/
 游戏统一使用**双层容器结构**：外层全屏背景层 + 内层宽高比约束层。
 
 ```html
-<div class="game-page">           <!-- 外层：全屏背景 -->
-  <div class="game-content">      <!-- 内层：宽高比约束 -->
+<div class="play-page">           <!-- 外层：全屏背景（或用 .game-container / .home-page） -->
+  <div class="play-inner">        <!-- 内层：宽高比约束（或用 .game-content-shell / .home） -->
     <!-- 游戏内容 -->
   </div>
 </div>
@@ -89,12 +89,12 @@ src/games/<game-id>/
 | `1 / 1` | 方形棋盘 | 象棋、围棋 |
 | `16 / 9` | 横屏游戏 | 弹球、射击、赛车 |
 
-内层容器用 `:style` 绑定实现动态宽高比：
+内层容器可用 `:style` 绑定实现动态宽高比，也可直接在 CSS 中硬编码：
 
 ```vue
 <template>
   <div class="play-page">
-    <div class="play-inner" :style="{ aspectRatio: '9 / 16' }">
+    <div class="play-inner" :style="{ aspectRatio: '3 / 4' }">
       <!-- 游戏内容 -->
     </div>
   </div>
@@ -106,7 +106,7 @@ src/games/<game-id>/
   width: 100%;
   overflow: hidden;
   position: relative;
-  /* 背景在此定义 */
+  /* 背景图/渐变在此定义 */
 }
 .play-inner {
   height: 100%;
@@ -118,7 +118,7 @@ src/games/<game-id>/
 </style>
 ```
 
-> 参考 `src/games/chinese-chess/index.vue` 中 `.play-page` / `.play-inner` 和 `Home.vue` 中 `.home-page` / `.home` 的实现（搜索 `position: relative; /* 背景在此定义 */` 可快速定位）。
+> 参考 `src/games/chinese-chess/index.vue` 中 `.play-page` / `.play-inner` 和 `src/games/chinese-chess/Home.vue` 中 `.home-page` / `.home` 的实现。
 
 ### 3.1 容器查询（Container Queries）自适应
 
@@ -226,18 +226,38 @@ el.addEventListener('pointerup', onPointerUp)
 
 ### 3.3 安全区域（Safe Area）
 
-在刘海屏/圆角屏设备上，外层容器需要适配安全区域：
+在刘海屏/圆角屏/有状态栏的手机上，**顶部功能元素**（header/HUD/status-bar/toolbar）必须预留安全区域，避免内容被状态栏遮挡。
+
+**规则：将 `padding-top` 单独拆分，使用 `max(原padding-top值, env(safe-area-inset-top))`。**
 
 ```css
-.play-page {
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-left: env(safe-area-inset-left, 0px);
-  padding-right: env(safe-area-inset-right, 0px);
+/* 正确：拆分 padding-top，语义清晰 */
+.play-header {
+  padding: 0 0 18px;
+  padding-top: max(4px, env(safe-area-inset-top));
+}
+
+.hud {
+  padding: 0 16px 12px;
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+
+/* 如果原顶部 padding 使用了 clamp，保留 clamp 逻辑 */
+.status-bar {
+  padding: 0 clamp(10px, 2.5cqw, 12px) 4px;
+  padding-top: max(clamp(12px, 4cqw, 20px), env(safe-area-inset-top));
 }
 ```
 
-> 安全区域加在**外层容器**（`.play-page`），而不是内层内容容器。内层宽高比约束层的 padding 会破坏布局计算。
+> **为什么加在顶部功能元素而不是外层容器？**
+> 外层容器（`.play-page`）通常包含 `aspect-ratio` 约束的内层内容容器。在外层加 `padding-top` 会破坏宽高比居中的布局计算。将 safe area 加在顶部功能元素上是最小侵入性的方案，不影响布局。
+
+> 底部安全区域（如首页底部列表）同理，使用 `padding-bottom: max(原值, env(safe-area-inset-bottom))`。
+
+**已实现的页面参考：**
+- 星际捕手 play 页：`src/games/star-catcher/index.vue`（`.hud`，第 571 行）
+- 星际捕手首页：`src/games/star-catcher/Home.vue`（`.menu-screen`/`.archive-screen`，第 353 行）
+- 记忆翻牌首页：`src/games/memory-match/Home.vue`（`.top-tools`，第 394 行）
 
 ### 4. 游戏首页设计
 
@@ -310,14 +330,14 @@ public/assets/games/                    # 首页列表图标
 
 游戏卡片（`GameCard.vue`）根据 `category` 字段使用统一配色，**同一分类所有游戏共用同一颜色**，不按列表位置分配：
 
-| 分类 | 卡片强调色 | 图标渐变 |
-|------|-----------|---------|
-| `益智` | `#6366f1` (indigo) | `linear-gradient(135deg, #4f46e5, #6366f1)` |
-| `棋类` | `#f59e0b` (amber) | `linear-gradient(135deg, #d97706, #f59e0b)` |
-| 其他 | `#a78bfa` (purple) | `linear-gradient(135deg, #7c3aed, #a78bfa)` |
+| 分类 | 卡片强调色 |
+|------|-----------|
+| `益智` | `#6366f1` (indigo) |
+| `棋类` | `#f59e0b` (amber) |
+| 其他 | `#a78bfa` (purple) |
 
 **规则：**
-- 卡片分类文字（`.cyber-card-category`）和 PLAY 徽章（`.cyber-card-badge`）使用 `--neon-color` CSS 变量，值来自上述配色
+- PLAY 徽章（`.cyber-card-badge`）的 `background` 直接使用上述配色
 - 新增游戏时，如果 `category` 已存在，自动使用已有颜色
 - 如果新增一个未定义的分类，需要在此表和 `GameCard.vue` 的 `categoryColors` 中新增颜色
 

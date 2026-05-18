@@ -208,7 +208,8 @@ function getPieceAlt(piece: Piece | null) {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(12px, 4cqw, 20px) clamp(10px, 2.5cqw, 12px) 4px;
+  padding: 0 clamp(10px, 2.5cqw, 12px) 4px;
+  padding-top: max(clamp(12px, 4cqw, 20px), env(safe-area-inset-top));
   position: relative;
   z-index: 1;
 }

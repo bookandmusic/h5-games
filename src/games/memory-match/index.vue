@@ -378,7 +378,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: clamp(8px, 1.6cqh, 20px);
-  padding: clamp(8px, 1.6cqh, 18px) clamp(12px, 3cqw, 28px) clamp(12px, 4cqh, 60px);
+  padding: 0 clamp(12px, 3cqw, 28px) clamp(12px, 4cqh, 60px);
+  padding-top: max(clamp(8px, 1.6cqh, 18px), env(safe-area-inset-top));
   flex: 1;
   position: relative;
   min-height: 0;

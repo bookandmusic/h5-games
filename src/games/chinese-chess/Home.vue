@@ -409,7 +409,8 @@ onMounted(() => {
   isolation: isolate;
   color: var(--text-main);
   font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  padding: clamp(8px, 2.5cqw, 12px) clamp(12px, 4cqw, 20px) 0;
+  padding: 0 clamp(12px, 4cqw, 20px) 0;
+  padding-top: max(clamp(8px, 2.5cqw, 12px), env(safe-area-inset-top));
   background: transparent;
   z-index: 1;
 }

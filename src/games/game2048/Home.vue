@@ -85,7 +85,8 @@ const nav = useGameNavigation(GAME_ID)
   flex-direction: column;
   align-items: center;
   gap: 78px;
-  padding: clamp(24px, 8vh, 72px) 18px 24px;
+  padding: 0 18px 24px;
+  padding-top: max(clamp(24px, 8vh, 72px), env(safe-area-inset-top));
   box-sizing: border-box;
 }
 
