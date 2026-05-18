@@ -72,6 +72,54 @@ npm run preflight && npm run format
 5. 图片/音频生成**必须逐张/逐个调用**，禁止并行（会撑爆显存）
 6. Vision API 分析**必须串行执行**，两次请求间隔至少 5 秒
 
+## Skill 临时产物管理
+
+调用 skill（如 comfyui-image、comfyui-audio、vision 等）生成的临时文件（图片、音频、分析结果等）必须存放在 `docs/tmp/` 目录下，按类型创建子目录：
+
+```
+docs/tmp/
+  images/     # 生成的图片
+  audio/      # 生成的音频
+  vision/     # Vision API 分析结果
+  ...         # 其他类型按需创建
+```
+
+- 临时文件不纳入 git 版本控制（已在 `.gitignore` 中配置）
+- 使用完毕后应及时清理过期临时文件
+- **禁止使用系统 `/tmp` 目录**，所有临时文件必须存放在项目 `docs/tmp/` 内
+- **临时产物文件名必须添加时间戳**（格式：`YYYYMMDD-HHmmss`），防止覆盖同名产物
+  - 示例：`3d-cartoon-robot-20260518-143022.png`
+  - 仅临时产物需要添加时间戳，游戏正式资源文件不需要
+
+### bg-remove 去背景
+
+使用 `rembg` 去除背景时，输出路径必须指向 `docs/tmp/images/`：
+
+```bash
+# 正确：输出到项目临时目录，添加时间戳
+rembg i input.png docs/tmp/images/output-nobg-20260518-143022.png
+
+# 错误：使用系统 /tmp 目录
+rembg i input.png /tmp/output-nobg.png  # 禁止
+```
+
+- **输入和输出路径不能相同**（rembg 不支持原地覆盖）
+- 每次只处理一张图片，禁止并行执行多个 rembg 进程
+- **输出文件名必须添加时间戳**（格式：`YYYYMMDD-HHmmss`），防止覆盖同名产物
+
+## 图片优化
+
+使用 `scripts/optimize-png.mjs` 对项目图片进行无损压缩：
+
+```bash
+node scripts/optimize-png.mjs
+```
+
+- 扫描 `src/**/*.png` 和 `public/**/*.png` 目录下的所有 PNG 文件
+- 使用 `pngquant` 进行有损压缩（质量范围 0.85-1.0，视觉上无损）
+- 原地覆盖原文件，显示每个文件的压缩前后大小和节省百分比
+- 最后输出总共节省的空间大小
+
 ## Git Commit
 
 - 格式：`type(scope): 中文描述`

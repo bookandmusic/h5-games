@@ -29,6 +29,9 @@ src-tauri/target/
 .opencode
 .trae
 
+# Skill generated temp files
+docs/tmp/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
