@@ -65,6 +65,8 @@ npm run preflight && npm run format
 
 任何一步报错都必须修复后重新从第 1 步开始。
 
+**如果本次修改包含 PNG 图片文件**，在上述命令通过后，提交前还必须运行[图片优化](#图片优化)命令，压缩后的文件需要一并提交。
+
 ## 游戏开发
 
 详细开发指南（容器布局、Container Queries、添加新游戏流程、图片/音频生成、UI 校验等）：
@@ -119,7 +121,7 @@ rembg i input.png /tmp/output-nobg.png  # 禁止
 
 ## 图片优化
 
-使用 `scripts/optimize-png.mjs` 对项目图片进行无损压缩：
+使用 `scripts/optimize-png.mjs` 对项目图片进行压缩优化：
 
 ```bash
 node scripts/optimize-png.mjs
@@ -132,6 +134,28 @@ node scripts/optimize-png.mjs
 
 ## Git Commit
 
-- 格式：`type(scope): 中文描述`
-- 必须预览 commit message 等待用户确认后才能提交
-- 禁止推送、禁止 force push，除非用户明确要求
+### 提交流程
+
+1. 分析所有未提交变更，按**最小化原则**合理划分 commit，每个 commit 一个独立逻辑单元
+2. 生成 Commit Message 预览（包含 scope 和 description）
+3. 展示给用户确认
+4. 用户明确同意后逐个执行提交
+
+### 格式
+
+```
+type(scope): 中文描述
+```
+
+- **type** 和 **scope** 使用英文
+- **description** 使用中文
+
+### 安全规则
+
+以下操作必须获得用户确认：
+- `git push --force` / `git reset --hard`
+- `git rebase -i`（交互式变基）
+- `git branch -D`（强制删除分支）
+- 任何可能丢失提交历史的操作
+
+常规操作（add、commit（含预览确认流程）、pull、checkout、merge）不需要额外确认。
