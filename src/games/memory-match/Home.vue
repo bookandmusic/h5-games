@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameNavigation } from '../../composables/useGameNavigation'
 import { gameStorage } from '../../stores/gameStorage'
@@ -7,6 +7,7 @@ import type { BestScore, Difficulty, SavedData, ThemeId } from './types'
 import { DEFAULT_DIFFICULTY, DEFAULT_THEME_ID, DIFFICULTIES, THEMES } from './themeConfig'
 import { formatTime } from './gameLogic'
 import { isBgmPlaying, playBgm, stopBgm, toggleBgm } from './soundManager'
+import GameContainer from '../../components/GameContainer.vue'
 
 const GAME_ID = 'memory-match'
 type SettingsView = 'main' | 'theme' | 'difficulty'
@@ -99,11 +100,15 @@ onMounted(() => {
   bgmOn.value = isBgmPlaying()
   loadData()
 })
+
+onUnmounted(() => {
+  stopBgm()
+})
 </script>
 
 <template>
-  <div class="home-page" :style="{ backgroundImage: `url(${bgUrl})` }">
-    <div class="home" :style="{ aspectRatio: '3 / 4' }">
+  <GameContainer :bg-image="bgUrl">
+    <div class="home">
       <div class="top-tools" aria-label="游戏菜单">
         <button class="badge-btn" type="button" aria-label="历史最佳" @click="showRecords = true">
           <span class="badge-body">
@@ -359,39 +364,21 @@ onMounted(() => {
         </div>
       </Transition>
     </div>
-  </div>
+  </GameContainer>
 </template>
 
 <style scoped>
-.home-page {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 100%;
-  width: 100%;
-  position: relative;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  overflow: hidden;
-}
-
 .home {
-  container-type: inline-size;
-  container-name: game;
   height: 100%;
-  max-width: 100%;
-  margin: 0 auto;
   position: relative;
-  z-index: 1;
-  padding: clamp(44px, 5.8cqh, 64px) clamp(22px, 6cqw, 58px) clamp(24px, 3.8cqh, 42px);
+  padding: 0;
   display: flex;
   flex-direction: column;
 }
 
 .top-tools {
   position: absolute;
-  top: max(16px, env(safe-area-inset-top));
+  top: 16px;
   left: clamp(14px, 4cqw, 44px);
   display: flex;
   gap: clamp(18px, 4cqw, 44px);
@@ -770,13 +757,8 @@ onMounted(() => {
 }
 
 @container game (max-width: 430px) {
-  .home {
-    padding-left: 22px;
-    padding-right: 22px;
-  }
-
   .top-tools {
-    top: max(12px, env(safe-area-inset-top));
+    top: 12px;
     left: 12px;
     gap: 14px;
   }
@@ -853,19 +835,7 @@ onMounted(() => {
   }
 }
 
-@container game (min-width: 600px) {
-  .home {
-    padding-left: 36px;
-    padding-right: 36px;
-  }
-}
-
 @container game (min-width: 800px) {
-  .home {
-    padding-left: 48px;
-    padding-right: 48px;
-  }
-
   .menu-panel {
     width: min(100%, 480px);
   }

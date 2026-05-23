@@ -19,6 +19,7 @@ import {
   playCompletionAudio,
   stopCompletionAudio,
 } from './soundManager'
+import GameContainer from '../../components/GameContainer.vue'
 
 const GAME_ID = 'memory-match'
 const route = useRoute()
@@ -39,6 +40,7 @@ const firstRevealTime = ref<number | null>(null)
 const showOptions = ref(false)
 
 let timerHandle: number | null = null
+let pendingTimeouts: number[] = []
 
 const currentTheme = computed(() => THEMES.find((t) => t.id === themeId.value)!)
 const currentDifficulty = computed(() => DIFFICULTIES[difficulty.value])
@@ -87,6 +89,11 @@ function stopTimer(): void {
   }
 }
 
+function clearPendingTimeouts(): void {
+  pendingTimeouts.forEach((id) => window.clearTimeout(id))
+  pendingTimeouts = []
+}
+
 function startGame(): void {
   resetIdCounter()
   const config = currentDifficulty.value
@@ -126,26 +133,32 @@ function checkMatch(): void {
 
   if (isMatch) {
     playMatchSound()
-    window.setTimeout(() => {
+    const tid = window.setTimeout(() => {
       revealed[0].state = 'matched'
       revealed[1].state = 'matched'
       phase.value = 'playing'
+      pendingTimeouts = pendingTimeouts.filter((id) => id !== tid)
 
       if (isAllMatched.value) {
         completeGame()
       }
     }, 500)
+    pendingTimeouts.push(tid)
   } else {
     playMismatchSound()
-    window.setTimeout(() => {
+    const tid1 = window.setTimeout(() => {
       shakingIds.value = new Set([revealed[0].id, revealed[1].id])
-      window.setTimeout(() => {
+      const tid2 = window.setTimeout(() => {
         revealed[0].state = 'hidden'
         revealed[1].state = 'hidden'
         shakingIds.value = new Set()
         phase.value = 'playing'
+        pendingTimeouts = pendingTimeouts.filter((id) => id !== tid2)
       }, 600)
+      pendingTimeouts.push(tid2)
+      pendingTimeouts = pendingTimeouts.filter((id) => id !== tid1)
     }, 700)
+    pendingTimeouts.push(tid1)
   }
 }
 
@@ -153,13 +166,14 @@ function completeGame(): void {
   stopTimer()
   stopBgm()
   loadCompletionAudio()
-  window.setTimeout(() => playCompletionAudio(), 600)
+  const tid = window.setTimeout(() => playCompletionAudio(), 600)
+  pendingTimeouts.push(tid)
 
   const prev = bestScores.value[difficulty.value]
   if (
     !prev ||
     elapsed.value < prev.time ||
-    (elapsed.value === prev.time && moves.value < prev.moves)
+    (elapsed.value === prev.time && moves.value <= prev.moves)
   ) {
     bestScores.value[difficulty.value] = {
       time: elapsed.value,
@@ -223,13 +237,18 @@ function initPlay(): void {
     difficulty.value = diffParam as Difficulty
   }
 
-  loadData().then(() => {
-    startGame()
-  })
+  loadData()
+    .then(() => {
+      startGame()
+    })
+    .catch(() => {
+      startGame()
+    })
 }
 
 registerCleanup(GAME_ID, () => {
   stopTimer()
+  clearPendingTimeouts()
   stopBgm()
   stopCompletionAudio()
 })
@@ -240,15 +259,15 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopTimer()
+  clearPendingTimeouts()
   stopBgm()
   stopCompletionAudio()
 })
 </script>
 
 <template>
-  <div class="play-page" :style="{ backgroundImage: `url(${bgUrl})` }">
-    <div v-if="showOptions" class="play-overlay" @click="showOptions = false" />
-    <div class="play-inner" :style="{ aspectRatio: '3 / 4' }">
+  <GameContainer :bg-image="bgUrl">
+    <div class="play-inner">
       <div class="play-screen">
         <div class="play-hud">
           <div class="hud-top">
@@ -320,14 +339,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <OptionsMenu
-        v-if="showOptions"
-        mode="playing"
-        @close="showOptions = false"
-        @restart="handleOptionsRestart"
-        @home="handleOptionsHome"
-      />
-
       <ResultOverlay
         :visible="phase === 'completed'"
         :moves="moves"
@@ -337,12 +348,23 @@ onUnmounted(() => {
         @home="goHome"
       />
     </div>
-  </div>
+
+    <Transition name="fade">
+      <div v-if="showOptions" class="options-wrapper">
+        <div class="play-overlay" />
+        <OptionsMenu
+          @close="showOptions = false"
+          @restart="handleOptionsRestart"
+          @home="handleOptionsHome"
+        />
+      </div>
+    </Transition>
+  </GameContainer>
 </template>
 
 <style scoped>
 .play-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 100;
   background: rgba(26, 54, 44, 0.52);
@@ -350,25 +372,14 @@ onUnmounted(() => {
   -webkit-backdrop-filter: blur(3px);
 }
 
-.play-page {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 100%;
-  width: 100%;
-  position: relative;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  overflow: hidden;
+.options-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
 }
 
 .play-inner {
-  container-type: inline-size;
-  container-name: game;
   height: 100%;
-  max-width: 100%;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -378,8 +389,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: clamp(8px, 1.6cqh, 20px);
-  padding: 0 clamp(12px, 3cqw, 28px) clamp(12px, 4cqh, 60px);
-  padding-top: max(clamp(8px, 1.6cqh, 18px), env(safe-area-inset-top));
+  padding: 0;
   flex: 1;
   position: relative;
   min-height: 0;
@@ -518,11 +528,6 @@ onUnmounted(() => {
   flex: 1;
 }
 
-.panel-subline span {
-  min-width: 0;
-  white-space: nowrap;
-}
-
 .hud-right-tools {
   display: flex;
   align-items: center;
@@ -623,11 +628,6 @@ onUnmounted(() => {
 }
 
 @container game (max-width: 500px) {
-  .play-screen {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-
   .panel-content {
     gap: 6px;
   }
@@ -660,17 +660,20 @@ onUnmounted(() => {
   }
 }
 
-@container game (min-width: 600px) {
-  .play-screen {
-    padding-left: 36px;
-    padding-right: 36px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hud-btn,
   .progress-fill {
     transition: none;
   }
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

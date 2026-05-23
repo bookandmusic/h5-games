@@ -1,13 +1,4 @@
 <script setup lang="ts">
-const props = withDefaults(
-  defineProps<{
-    mode?: 'idle' | 'playing'
-  }>(),
-  {
-    mode: 'playing',
-  }
-)
-
 const emit = defineEmits<{
   close: []
   restart: []
@@ -24,59 +15,50 @@ function handleHome(): void {
 </script>
 
 <template>
-  <Transition name="fade">
-    <div class="options-panel">
-      <button class="opt-btn" @click="handleHome">
-        <span class="opt-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <template v-if="props.mode === 'idle'">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16 17 21 12 16 7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </template>
-            <template v-else>
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <polyline points="9 22 9 12 15 12 15 22" />
-            </template>
-          </svg>
-        </span>
-        <span class="opt-label">{{ props.mode === 'idle' ? '退出游戏' : '主页菜单' }}</span>
-      </button>
+  <div class="options-panel">
+    <button class="opt-btn" @click="handleHome">
+      <span class="opt-icon">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      </span>
+      <span class="opt-label">主页菜单</span>
+    </button>
 
-      <button v-if="props.mode === 'playing'" class="opt-btn" @click="handleRestart">
-        <span class="opt-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="23 4 23 10 17 10" />
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-          </svg>
-        </span>
-        <span class="opt-label">重新开始</span>
-      </button>
+    <button class="opt-btn" @click="handleRestart">
+      <span class="opt-icon">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="23 4 23 10 17 10" />
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+        </svg>
+      </span>
+      <span class="opt-label">重新开始</span>
+    </button>
 
-      <button class="opt-btn opt-btn-primary" @click="emit('close')">
-        <span class="opt-icon">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <polygon points="7 4 19 12 7 20 7 4" />
-          </svg>
-        </span>
-        <span class="opt-label">继续</span>
-      </button>
-    </div>
-  </Transition>
+    <button class="opt-btn opt-btn-primary" @click="emit('close')">
+      <span class="opt-icon">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <polygon points="7 4 19 12 7 20 7 4" />
+        </svg>
+      </span>
+      <span class="opt-label">继续</span>
+    </button>
+  </div>
 </template>
 
 <style scoped>
@@ -87,7 +69,7 @@ function handleHome(): void {
   transform: translate(-50%, -50%);
   z-index: 150;
   width: min(100%, 480px);
-  max-height: calc(100cqh - 48px);
+  max-height: calc(100dvh - 48px);
   overflow-y: auto;
   overscroll-behavior: contain;
   display: flex;
@@ -205,7 +187,7 @@ function handleHome(): void {
   }
 }
 
-@media (max-height: 760px) {
+@container game (max-height: 600px) {
   .opt-btn {
     min-height: 52px;
     gap: 10px;

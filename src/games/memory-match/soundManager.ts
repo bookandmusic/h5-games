@@ -68,11 +68,12 @@ export function isBgmPlaying(): boolean {
 
 export function toggleBgm(): boolean {
   if (isBgmPlaying()) {
-    bgmAudio!.volume = 0
+    bgmAudio!.pause()
     return false
   }
   if (bgmAudio) {
     bgmAudio.volume = 0.35
+    void bgmAudio.play()
     return true
   }
   return false
@@ -112,5 +113,6 @@ export function stopCompletionAudio(): void {
   if (completionAudio) {
     completionAudio.pause()
     completionAudio.currentTime = 0
+    completionAudio = null
   }
 }

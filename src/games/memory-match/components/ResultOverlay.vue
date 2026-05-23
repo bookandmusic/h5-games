@@ -21,8 +21,11 @@ const bestText = computed(() => {
   return `${formatTime(props.best.time)} / ${props.best.moves} 次`
 })
 const isNewBest = computed(() => {
-  if (!props.best) return false
-  return props.time <= props.best.time && props.moves <= props.best.moves
+  if (!props.best) return true
+  return (
+    props.time < props.best.time ||
+    (props.time === props.best.time && props.moves <= props.best.moves)
+  )
 })
 </script>
 
@@ -96,7 +99,7 @@ const isNewBest = computed(() => {
 
 <style scoped>
 .overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(26, 54, 44, 0.54);
   backdrop-filter: blur(3px);
@@ -105,12 +108,12 @@ const isNewBest = computed(() => {
   align-items: center;
   justify-content: center;
   z-index: 200;
-  padding: 24px;
+  padding: clamp(12px, 3cqw, 24px);
 }
 
 .scroll-modal {
   width: 100%;
-  max-width: min(390px, calc(100vw - 40px));
+  max-width: min(390px, 90cqw);
   border-radius: 20px;
   overflow: hidden;
   box-shadow:
@@ -120,7 +123,7 @@ const isNewBest = computed(() => {
 
 .scroll-header {
   background: linear-gradient(180deg, #d67949 0%, #bd613b 100%);
-  padding: 18px 20px;
+  padding: clamp(12px, 2.5cqh, 18px) clamp(14px, 3cqw, 20px);
   text-align: center;
   position: relative;
   border: 3px solid #fff8df;
@@ -129,7 +132,7 @@ const isNewBest = computed(() => {
 }
 
 .scroll-title {
-  font-size: clamp(26px, 7vw, 34px);
+  font-size: clamp(22px, 6cqw, 34px);
   font-weight: 900;
   color: #fff;
   text-shadow:
@@ -141,27 +144,27 @@ const isNewBest = computed(() => {
   background: #fffef0;
   border: 3px solid #fff8df;
   border-top: none;
-  padding: 26px 24px 28px;
+  padding: clamp(18px, 4cqh, 26px) clamp(16px, 4cqw, 24px) clamp(20px, 4cqh, 28px);
   text-align: center;
 }
 
 .new-best {
   display: inline-block;
-  font-size: 13px;
+  font-size: clamp(11px, 2.5cqw, 13px);
   font-weight: 900;
   color: #fff;
   background: linear-gradient(135deg, #f57c00, #ef6c00);
-  padding: 5px 16px;
+  padding: clamp(4px, 0.8cqh, 5px) clamp(12px, 3cqw, 16px);
   border-radius: 20px;
-  margin-bottom: 16px;
+  margin-bottom: clamp(12px, 2.5cqh, 16px);
 }
 
 .stats {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 20px;
-  margin-bottom: 16px;
+  gap: clamp(14px, 3cqw, 20px);
+  margin-bottom: clamp(12px, 2.5cqh, 16px);
 }
 
 .stat {
@@ -172,7 +175,7 @@ const isNewBest = computed(() => {
 }
 
 .stat-value {
-  font-size: 30px;
+  font-size: clamp(24px, 6cqw, 30px);
   font-weight: 900;
   color: #8a3f15;
   line-height: 1;
@@ -180,14 +183,14 @@ const isNewBest = computed(() => {
 }
 
 .stat-label {
-  font-size: 12px;
+  font-size: clamp(10px, 2.2cqw, 12px);
   color: #9b6b37;
   font-weight: 800;
 }
 
 .stat-divider {
   width: 1px;
-  height: 32px;
+  height: clamp(24px, 5cqh, 32px);
   background: #d4c4b0;
 }
 
@@ -195,21 +198,21 @@ const isNewBest = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px 16px;
+  padding: clamp(8px, 1.5cqh, 10px) clamp(12px, 3cqw, 16px);
   background: #ffe8bc;
   border: 2px solid rgba(156, 107, 55, 0.28);
   border-radius: 14px;
-  margin-bottom: 20px;
+  margin-bottom: clamp(14px, 3cqh, 20px);
 }
 
 .best-label {
-  font-size: 11px;
+  font-size: clamp(9px, 2cqw, 11px);
   color: #9b6b37;
   font-weight: 800;
 }
 
 .best-value {
-  font-size: 14px;
+  font-size: clamp(12px, 2.8cqw, 14px);
   color: #8a3f15;
   font-weight: 900;
 }
@@ -217,19 +220,19 @@ const isNewBest = computed(() => {
 .actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: clamp(8px, 1.5cqh, 10px);
 }
 
 .wood-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 56px;
-  padding: 14px 20px;
+  gap: clamp(6px, 1.5cqw, 8px);
+  min-height: clamp(48px, 8cqh, 56px);
+  padding: clamp(10px, 2cqh, 14px) clamp(14px, 3cqw, 20px);
   border: 3px solid #df9b4c;
   border-radius: 16px;
-  font-size: 16px;
+  font-size: clamp(14px, 3cqw, 16px);
   font-weight: 900;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -249,8 +252,8 @@ const isNewBest = computed(() => {
 }
 
 .btn-icon {
-  width: 18px;
-  height: 18px;
+  width: clamp(16px, 3.5cqw, 18px);
+  height: clamp(16px, 3.5cqw, 18px);
   flex-shrink: 0;
 }
 
