@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router'
 import { getPieceLabel } from './engine'
 import type { Piece } from './types'
 import { useGameNavigation } from '../../composables/useGameNavigation'
+import GameContainer from '../../components/GameContainer.vue'
 import { useChessGame } from './composables/useChessGame'
 import GameToolbar from './components/GameToolbar.vue'
 import HomeDialog from './components/HomeDialog.vue'
@@ -26,6 +27,7 @@ const {
   showExitConfirm,
   showStartSetup,
   animatingMove,
+  orientation,
   displayedRows,
   displayedCols,
   isBoardLocked,
@@ -59,7 +61,7 @@ function getPieceAlt(piece: Piece | null) {
 </script>
 
 <template>
-  <div v-if="loaded" class="play-page">
+  <GameContainer v-if="loaded">
     <div class="play-inner">
       <header class="status-bar">
         <div class="mode-plaque">
@@ -82,7 +84,12 @@ function getPieceAlt(piece: Piece | null) {
         </div>
         <div class="board-frame" ref="boardFrameRef" :class="{ locked: isBoardLocked }">
           <div class="board-lines">
-            <svg class="lines-svg" viewBox="0 0 8 9" preserveAspectRatio="none">
+            <svg
+              class="lines-svg"
+              viewBox="0 0 8 9"
+              preserveAspectRatio="none"
+              :style="{ transform: orientation === 'black' ? 'scaleY(-1)' : '' }"
+            >
               <defs>
                 <pattern id="g" width="1" height="1" patternUnits="userSpaceOnUse">
                   <line x1="0" y1="0" x2="1" y2="0" stroke="#5c3d2e" stroke-width="0.03" />
@@ -159,26 +166,18 @@ function getPieceAlt(piece: Piece | null) {
       :mode="pendingSetupMode"
       @start="handleStartConfig"
     />
-  </div>
+  </GameContainer>
 </template>
 
 <style scoped>
-.play-page {
-  --paper-base: #ece0c6;
-  --paper-warm: #efe6d4;
-  --paper-deep: #cfc1a2;
-  --accent-red: #b91c1c;
-  --text-primary: #5c3d2e;
-  --text-secondary: #8b6d4c;
-
+.play-inner {
   height: 100%;
-  min-height: 0;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
-  color: var(--text-primary);
-  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+:deep(.game-bg) {
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.28), transparent 35%),
     linear-gradient(
@@ -190,26 +189,12 @@ function getPieceAlt(piece: Piece | null) {
     url('./assets/images/bg-mountains.png') center center / cover no-repeat;
 }
 
-.play-inner {
-  container-type: inline-size;
-  container-name: game;
-  height: 100%;
-  aspect-ratio: 3 / 4;
-  margin: 0 auto;
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 1;
-}
-
 .status-bar {
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 clamp(10px, 2.5cqw, 12px) 4px;
-  padding-top: max(clamp(12px, 4cqw, 20px), env(safe-area-inset-top));
   position: relative;
   z-index: 1;
 }
@@ -312,7 +297,7 @@ function getPieceAlt(piece: Piece | null) {
   }
 }
 
-@media (min-aspect-ratio: 4/3) {
+@container game (max-height: 500px) {
   .board-frame {
     --ps: min(6cqw, 12cqh, 55px);
   }
@@ -412,9 +397,10 @@ function getPieceAlt(piece: Piece | null) {
 }
 
 .point.selected .piece {
-  transform: scale(1.15);
+  transform: scale(1.06);
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.35),
+    0 0 0 2px rgba(237, 178, 90, 0.5),
     0 2px 4px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
@@ -423,26 +409,26 @@ function getPieceAlt(piece: Piece | null) {
   background:
     radial-gradient(
       circle at 35% 35%,
-      rgba(255, 251, 241, 0.98),
-      rgba(252, 230, 191, 0.98) 60%,
+      rgba(255, 243, 235, 0.98),
+      rgba(252, 220, 191, 0.98) 60%,
       rgba(218, 172, 121, 0.95)
     ),
-    linear-gradient(180deg, #f5e0d0, #d9ae7c);
+    linear-gradient(180deg, #f5ddd0, #d9ae7c);
   border: clamp(1.5px, 0.5cqw, 2px) solid #cb945f;
-  color: var(--accent-red);
+  color: #be2c21;
 }
 
 .piece.black {
   background:
     radial-gradient(
       circle at 35% 35%,
-      rgba(255, 251, 241, 0.98),
-      rgba(247, 225, 188, 0.98) 60%,
-      rgba(211, 163, 111, 0.95)
+      rgba(248, 248, 246, 0.98),
+      rgba(230, 225, 215, 0.98) 60%,
+      rgba(200, 190, 175, 0.95)
     ),
-    linear-gradient(180deg, #f5e0d0, #d9ae7c);
-  border: clamp(1.5px, 0.5cqw, 2px) solid #cb945f;
-  color: #34312f;
+    linear-gradient(180deg, #eae5dc, #ccc5b9);
+  border: clamp(1.5px, 0.5cqw, 2px) solid #8a7a6a;
+  color: #2a2a28;
 }
 
 .piece-img {

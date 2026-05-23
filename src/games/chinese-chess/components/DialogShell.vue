@@ -19,23 +19,25 @@ const cardStyle = computed(() => (props.width ? { width: props.width } : undefin
 </script>
 
 <template>
-  <div class="overlay" @click.self="$emit('close')">
-    <div class="card" role="dialog" aria-modal="true" :style="cardStyle">
-      <button v-if="showClose" class="close-btn" @click="$emit('close')">
-        <span class="close-icon">✕</span>
-      </button>
-      <div class="card-body" :class="bodyClass">
-        <div v-if="title" class="header-box">
-          <div class="decor-line" />
-          <div class="title-card">
-            <div class="title-card-inner">{{ title }}</div>
+  <Teleport to="body">
+    <div class="overlay" @click.self="$emit('close')">
+      <div class="card" role="dialog" aria-modal="true" :style="cardStyle">
+        <button v-if="showClose" class="close-btn" @click="$emit('close')">
+          <span class="close-icon">✕</span>
+        </button>
+        <div class="card-body" :class="bodyClass">
+          <div v-if="title" class="header-box">
+            <div class="decor-line" />
+            <div class="title-card">
+              <div class="title-card-inner">{{ title }}</div>
+            </div>
+            <div class="decor-line" />
           </div>
-          <div class="decor-line" />
+          <slot />
         </div>
-        <slot />
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>

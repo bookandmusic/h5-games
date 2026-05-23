@@ -15,6 +15,7 @@ import {
 } from './store/save'
 import DialogBtn from './components/DialogBtn.vue'
 import type { GameMode } from './types'
+import GameContainer from '../../components/GameContainer.vue'
 
 function imgUrl(name: string): string {
   return new URL(`./assets/images/${name}`, import.meta.url).href
@@ -148,7 +149,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="home-page">
+  <GameContainer>
     <div class="home">
       <div class="top-bar">
         <div class="plaque-outer c-mask">
@@ -209,176 +210,192 @@ onMounted(() => {
         </div>
       </div>
 
-      <div v-if="showProfile" class="overlay" @click.self="showProfile = false">
-        <div class="card">
-          <button class="close-btn c-mask" @click="showProfile = false">
-            <span class="close-icon">✕</span>
-          </button>
-          <div class="card-body">
-            <div class="header-box">
-              <div class="decor-line c-mask"></div>
-              <div class="title-card c-mask">
-                <div class="title-card-inner c-mask">个人资料</div>
+      <Teleport to="body">
+        <div v-if="showProfile" class="overlay" @click.self="showProfile = false">
+          <div class="card">
+            <button class="close-btn" @click="showProfile = false">
+              <span class="close-icon">✕</span>
+            </button>
+            <div class="card-body">
+              <div class="header-box">
+                <div class="decor-line c-mask"></div>
+                <div class="title-card c-mask">
+                  <div class="title-card-inner c-mask">个人资料</div>
+                </div>
+                <div class="decor-line c-mask"></div>
               </div>
-              <div class="decor-line c-mask"></div>
-            </div>
-            <div class="profile-user">
-              <div class="profile-avatar">
-                <span class="profile-avatar-inner">弈</span>
+              <div class="profile-user">
+                <div class="profile-avatar">
+                  <span class="profile-avatar-inner">弈</span>
+                </div>
+                <div class="profile-level">{{ levelTitle }}</div>
               </div>
-              <div class="profile-level">{{ levelTitle }}</div>
-            </div>
-            <div class="section-title">战绩</div>
-            <div class="stats-grid">
-              <div class="stat-item">
-                <span class="stat-label">对局次数</span>
-                <span class="stat-value">{{ profile.totalGames }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">胜场</span>
-                <span class="stat-value">{{ profile.wins }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">胜率</span>
-                <span class="stat-value">{{ winRate }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">当前段位</span>
-                <span class="stat-value">{{ getRankTitle(profile.level) }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">历史最高</span>
-                <span class="stat-value">{{ getRankTitle(profile.highestLevel) }}</span>
+              <div class="section-title">战绩</div>
+              <div class="stats-grid">
+                <div class="stat-item">
+                  <span class="stat-label">对局次数</span>
+                  <span class="stat-value">{{ profile.totalGames }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">胜场</span>
+                  <span class="stat-value">{{ profile.wins }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">胜率</span>
+                  <span class="stat-value">{{ winRate }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">当前段位</span>
+                  <span class="stat-value">{{ getRankTitle(profile.level) }}</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">历史最高</span>
+                  <span class="stat-value">{{ getRankTitle(profile.highestLevel) }}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </Teleport>
 
-      <div v-if="showTasks" class="overlay" @click.self="showTasks = false">
-        <div class="card">
-          <button class="close-btn c-mask" @click="showTasks = false">
-            <span class="close-icon">✕</span>
-          </button>
-          <div class="card-body">
-            <div class="header-box">
-              <div class="decor-line c-mask"></div>
-              <div class="title-card c-mask">
-                <div class="title-card-inner c-mask">任务中心</div>
+      <Teleport to="body">
+        <div v-if="showTasks" class="overlay" @click.self="showTasks = false">
+          <div class="card">
+            <button class="close-btn" @click="showTasks = false">
+              <span class="close-icon">✕</span>
+            </button>
+            <div class="card-body">
+              <div class="header-box">
+                <div class="decor-line c-mask"></div>
+                <div class="title-card c-mask">
+                  <div class="title-card-inner c-mask">任务中心</div>
+                </div>
+                <div class="decor-line c-mask"></div>
               </div>
-              <div class="decor-line c-mask"></div>
-            </div>
-            <div class="task-list">
-              <div
-                v-for="task in todayTasks"
-                :key="task.id"
-                class="task-item"
-                :class="{ completed: task.completed, claimed: task.claimed }"
-              >
-                <img class="task-icon" :src="task.icon" :alt="task.label" />
-                <div class="task-info">
-                  <div class="task-head">
-                    <span class="task-label">{{ task.label }}</span>
-                  </div>
-                  <div class="task-bar-wrap">
-                    <div
-                      class="task-bar"
-                      :style="{ width: (task.progress / task.target) * 100 + '%' }"
-                    ></div>
-                  </div>
-                  <div class="task-foot">
-                    <span class="task-reward">+{{ task.reward }}</span>
-                    <template v-if="task.id === 'login'">
-                      <button v-if="task.canClaim" class="task-claim-btn" @click="task.onClaim">
-                        签到
-                      </button>
-                      <span v-else class="task-done">{{ task.claimed ? '已签' : '未签' }}</span>
-                    </template>
-                    <template v-else>
-                      <button v-if="task.canClaim" class="task-claim-btn" @click="task.onClaim">
-                        领取
-                      </button>
-                      <span v-else-if="task.claimed" class="task-done">已领</span>
-                      <span v-else class="task-progress">{{
-                        task.progress + '/' + task.target
-                      }}</span>
-                    </template>
+              <div class="task-list">
+                <div
+                  v-for="task in todayTasks"
+                  :key="task.id"
+                  class="task-item"
+                  :class="{ completed: task.completed, claimed: task.claimed }"
+                >
+                  <img class="task-icon" :src="task.icon" :alt="task.label" />
+                  <div class="task-info">
+                    <div class="task-head">
+                      <span class="task-label">{{ task.label }}</span>
+                    </div>
+                    <div class="task-bar-wrap">
+                      <div
+                        class="task-bar"
+                        :style="{ width: (task.progress / task.target) * 100 + '%' }"
+                      ></div>
+                    </div>
+                    <div class="task-foot">
+                      <span class="task-reward">+{{ task.reward }}</span>
+                      <template v-if="task.id === 'login'">
+                        <button v-if="task.canClaim" class="task-claim-btn" @click="task.onClaim">
+                          领取
+                        </button>
+                        <span v-else class="task-done">已领</span>
+                      </template>
+                      <template v-else>
+                        <button v-if="task.canClaim" class="task-claim-btn" @click="task.onClaim">
+                          领取
+                        </button>
+                        <span v-else-if="task.claimed" class="task-done">已领</span>
+                        <span v-else class="task-progress">{{
+                          task.progress + '/' + task.target
+                        }}</span>
+                      </template>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </Teleport>
 
-      <div v-if="showShop" class="overlay" @click.self="closeShop">
-        <div class="card">
-          <button class="close-btn c-mask" @click="closeShop">
-            <span class="close-icon">✕</span>
-          </button>
-          <div class="card-body">
-            <div class="header-box">
-              <div class="decor-line c-mask"></div>
-              <div class="title-card c-mask">
-                <div class="title-card-inner c-mask">商城</div>
+      <Teleport to="body">
+        <div v-if="showShop" class="overlay" @click.self="closeShop">
+          <div class="card">
+            <button class="close-btn" @click="closeShop">
+              <span class="close-icon">✕</span>
+            </button>
+            <div class="card-body">
+              <div class="header-box">
+                <div class="decor-line c-mask"></div>
+                <div class="title-card c-mask">
+                  <div class="title-card-inner c-mask">商城</div>
+                </div>
+                <div class="decor-line c-mask"></div>
               </div>
-              <div class="decor-line c-mask"></div>
-            </div>
-            <div class="shop-grid">
-              <div class="shop-item">
-                <div class="shop-item-icon">悔</div>
-                <div class="shop-item-info">
-                  <div class="shop-item-header">
-                    <div class="shop-item-name">悔棋</div>
-                    <div class="shop-item-price">{{ SHOP_PRICES.undo }} 金币</div>
-                  </div>
-                  <div class="shop-item-desc">仅单人模式可用</div>
-                  <div class="shop-item-footer">
-                    <div class="shop-item-owned">持有 {{ inventory.undo }}</div>
-                    <DialogBtn
-                      compact
-                      variant="default"
-                      :disabled="coins < SHOP_PRICES.undo"
-                      @click="buyItem('undo')"
-                      >购买</DialogBtn
-                    >
+              <div class="shop-grid">
+                <div class="shop-item">
+                  <div class="shop-item-icon">悔</div>
+                  <div class="shop-item-info">
+                    <div class="shop-item-header">
+                      <div class="shop-item-name">悔棋</div>
+                      <div class="shop-item-price">{{ SHOP_PRICES.undo }} 金币</div>
+                    </div>
+                    <div class="shop-item-desc">仅单人模式可用</div>
+                    <div class="shop-item-footer">
+                      <div class="shop-item-owned">持有 {{ inventory.undo }}</div>
+                      <DialogBtn
+                        compact
+                        variant="default"
+                        :disabled="coins < SHOP_PRICES.undo"
+                        @click="buyItem('undo')"
+                        >购买</DialogBtn
+                      >
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="shop-item">
-                <div class="shop-item-icon">策</div>
-                <div class="shop-item-info">
-                  <div class="shop-item-header">
-                    <div class="shop-item-name">提示</div>
-                    <div class="shop-item-price">{{ SHOP_PRICES.hint }} 金币</div>
-                  </div>
-                  <div class="shop-item-desc">仅单人模式可用</div>
-                  <div class="shop-item-footer">
-                    <div class="shop-item-owned">持有 {{ inventory.hint }}</div>
-                    <DialogBtn
-                      compact
-                      variant="default"
-                      :disabled="coins < SHOP_PRICES.hint"
-                      @click="buyItem('hint')"
-                      >购买</DialogBtn
-                    >
+                <div class="shop-item">
+                  <div class="shop-item-icon">策</div>
+                  <div class="shop-item-info">
+                    <div class="shop-item-header">
+                      <div class="shop-item-name">提示</div>
+                      <div class="shop-item-price">{{ SHOP_PRICES.hint }} 金币</div>
+                    </div>
+                    <div class="shop-item-desc">仅单人模式可用</div>
+                    <div class="shop-item-footer">
+                      <div class="shop-item-owned">持有 {{ inventory.hint }}</div>
+                      <DialogBtn
+                        compact
+                        variant="default"
+                        :disabled="coins < SHOP_PRICES.hint"
+                        @click="buyItem('hint')"
+                        >购买</DialogBtn
+                      >
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </Teleport>
     </div>
-  </div>
+  </GameContainer>
 </template>
 
 <style scoped>
-.home-page {
+.home {
+  --text-main: #5d4737;
+  --text-sub: #8d7358;
+  --seal: #c42d2d;
+
   height: 100%;
-  width: 100%;
-  position: relative;
-  overflow: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-main);
+  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  padding: 0;
+}
+
+:deep(.game-bg) {
   background:
     radial-gradient(circle at top left, rgba(255, 252, 245, 0.22), transparent 35%),
     linear-gradient(
@@ -388,31 +405,6 @@ onMounted(() => {
       rgba(229, 213, 188, 0.22) 100%
     ),
     url('./assets/images/bg-mountains.png') center center / cover no-repeat;
-}
-
-.home {
-  container-type: inline-size;
-  container-name: home;
-  --text-main: #5d4737;
-  --text-sub: #8d7358;
-  --seal: #c42d2d;
-
-  height: 100%;
-  aspect-ratio: 3 / 4;
-  max-width: 100%;
-  margin: 0 auto;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  isolation: isolate;
-  color: var(--text-main);
-  font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  padding: 0 clamp(12px, 4cqw, 20px) 0;
-  padding-top: max(clamp(8px, 2.5cqw, 12px), env(safe-area-inset-top));
-  background: transparent;
-  z-index: 1;
 }
 
 .top-bar {
@@ -616,7 +608,7 @@ onMounted(() => {
   transform: scale(0.93);
 }
 
-@media (max-width: 640px) {
+@container game (max-width: 640px) {
   .home-left {
     width: 60%;
   }
@@ -630,7 +622,7 @@ onMounted(() => {
   }
 }
 
-@media (max-width: 420px) {
+@container game (max-width: 420px) {
   .top-bar {
     gap: 10px;
     max-width: 420px;
@@ -755,7 +747,7 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-@media (max-width: 420px) {
+@container game (max-width: 420px) {
   .bottom-tabs {
     gap: 12px;
     padding: 8px 0 10px;
@@ -782,6 +774,10 @@ onMounted(() => {
 }
 
 .overlay {
+  --text-main: #5d4737;
+  --text-sub: #8d7358;
+  --seal: #c42d2d;
+
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
@@ -946,36 +942,30 @@ onMounted(() => {
 
 .close-btn {
   position: absolute;
-  right: clamp(16px, 4cqw, 24px);
-  top: clamp(16px, 4cqw, 24px);
-  width: clamp(28px, 7cqw, 32px);
-  height: clamp(28px, 7cqw, 32px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.4);
+  right: 24px;
+  top: 24px;
+  width: 32px;
+  height: 32px;
   border: none;
-  border-radius: 50%;
+  background: #b0885a;
   cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 150ms ease;
-}
-
-.close-btn:hover {
-  background: rgba(0, 0, 0, 0.6);
-}
-
-.close-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
-  transform: rotate(-45deg);
-  color: #fff;
-  font-size: clamp(18px, 5.5cqw, 22px);
-  line-height: 1;
-  font-weight: 400;
+  transform: rotate(45deg);
+  padding: 0;
+  z-index: 10;
+  -webkit-tap-highlight-color: transparent;
+  mask:
+    radial-gradient(circle at 0 0, transparent 2px, #000 0) 0 0 / 51% 51% no-repeat,
+    radial-gradient(circle at 100% 0, transparent 2px, #000 0) 100% 0 / 51% 51% no-repeat,
+    radial-gradient(circle at 0 100%, transparent 2px, #000 0) 0 100% / 51% 51% no-repeat,
+    radial-gradient(circle at 100% 100%, transparent 2px, #000 0) 100% 100% / 51% 51% no-repeat;
+  -webkit-mask:
+    radial-gradient(circle at 0 0, transparent 2px, #000 0) 0 0 / 51% 51% no-repeat,
+    radial-gradient(circle at 100% 0, transparent 2px, #000 0) 100% 0 / 51% 51% no-repeat,
+    radial-gradient(circle at 0 100%, transparent 2px, #000 0) 0 100% / 51% 51% no-repeat,
+    radial-gradient(circle at 100% 100%, transparent 2px, #000 0) 100% 100% / 51% 51% no-repeat;
 }
 
 .close-btn::before {
@@ -986,8 +976,21 @@ onMounted(() => {
   z-index: -1;
 }
 
+.close-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-45deg);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 400;
+}
+
 .card-body {
-  padding: clamp(18px, 5cqw, 28px) clamp(18px, 5cqw, 28px) clamp(16px, 4cqw, 24px);
+  padding: 28px 28px 24px;
   position: relative;
   z-index: 3;
 }
@@ -1009,7 +1012,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: clamp(16px, 5cqw, 24px);
+  margin-bottom: 24px;
   width: 100%;
   justify-content: center;
 }
@@ -1230,23 +1233,22 @@ onMounted(() => {
 
 .task-claim-btn {
   border: none;
-  background: var(--seal);
-  color: #fff;
+  background: none;
+  color: var(--seal);
   font-size: clamp(10px, 3cqw, 12px);
-  font-weight: 600;
-  padding: clamp(2px, 0.8cqw, 3px) clamp(10px, 3cqw, 14px);
-  border-radius: 6px;
+  font-weight: 700;
+  padding: 0;
   cursor: pointer;
   white-space: nowrap;
   font-family: 'Noto Serif SC', 'STSong', serif;
   transition:
     transform 100ms ease,
-    background 150ms ease;
+    opacity 150ms ease;
 }
 
 .task-claim-btn:active {
   transform: scale(0.93);
-  background: #a82424;
+  opacity: 0.7;
 }
 
 .task-done {

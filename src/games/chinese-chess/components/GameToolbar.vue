@@ -1,5 +1,7 @@
 <script setup lang="ts">
-defineProps<{
+import { computed } from 'vue'
+
+const props = defineProps<{
   undoCount: number
   hintCount: number
   single: boolean
@@ -18,13 +20,16 @@ const allButtons: Array<{ label: string; action: () => void; key: string }> = [
   { label: '提示', action: () => emit('hint'), key: 'hint' },
   { label: '退出', action: () => emit('exit'), key: 'exit' },
 ]
+
+const visibleButtons = computed(() =>
+  allButtons.filter((btn) => btn.key === 'restart' || btn.key === 'exit' || props.single)
+)
 </script>
 
 <template>
   <div class="toolbar">
     <button
-      v-for="btn in allButtons"
-      v-show="btn.key === 'restart' || btn.key === 'exit' || single"
+      v-for="btn in visibleButtons"
       :key="btn.key"
       class="toolbar-btn"
       :class="{
@@ -50,7 +55,6 @@ const allButtons: Array<{ label: string; action: () => void; key: string }> = [
   justify-content: center;
   gap: clamp(10px, 2.5cqw, 16px);
   padding: clamp(8px, 2.5cqw, 10px) clamp(6px, 2cqw, 14px) clamp(10px, 3cqh, 16px);
-  flex-wrap: wrap;
 }
 
 .toolbar-btn {
@@ -75,6 +79,7 @@ const allButtons: Array<{ label: string; action: () => void; key: string }> = [
 }
 
 .toolbar-btn:active:not(.disabled) {
+  transform: scale(0.95);
   background: linear-gradient(180deg, #8f8570, #756c59);
 }
 
@@ -105,7 +110,7 @@ const allButtons: Array<{ label: string; action: () => void; key: string }> = [
   box-shadow: none;
 }
 
-@media (max-width: 420px) {
+@container game (max-width: 420px) {
   .toolbar {
     gap: 10px;
     padding: 8px 8px 12px;
