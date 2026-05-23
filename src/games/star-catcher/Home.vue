@@ -10,6 +10,7 @@ import {
   type AchievementDefinition,
 } from './archive'
 import type { AchievementState, GameMode, GameRecords } from './types'
+import GameContainer from '../../components/GameContainer.vue'
 
 const GAME_ID = 'star-catcher'
 const router = useRouter()
@@ -109,12 +110,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    class="star-home"
-    :class="{ 'archive-active': view === 'archive' }"
-    :style="{ backgroundImage: `url(${bgUrl})` }"
-  >
-    <div class="home-inner">
+  <GameContainer :bg-image="bgUrl">
+    <div>
       <section v-if="view === 'menu'" class="menu-screen">
         <div class="brand-lockup">
           <img :src="iconUrl" alt="星际捕手" class="brand-mark" draggable="false" />
@@ -236,122 +233,15 @@ onMounted(() => {
         </div>
       </section>
     </div>
-  </div>
+  </GameContainer>
 </template>
 
 <style scoped>
-.star-home {
-  position: relative;
-  height: 100%;
-  overflow: hidden;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  color: #fff;
-}
-
-.home-inner {
-  height: 100%;
-  aspect-ratio: 3 / 4;
-  margin: 0 auto;
-  max-width: 100%;
-  container-type: inline-size;
-  container-name: game;
-  position: relative;
-  z-index: 1;
-}
-
-.starfield {
-  position: absolute;
-  inset: 0;
-  opacity: 0.7;
-  background-image:
-    radial-gradient(circle, rgba(255, 255, 255, 0.7) 0 1px, transparent 1.5px),
-    radial-gradient(circle, rgba(220, 245, 255, 0.45) 0 1px, transparent 1.5px);
-  background-position:
-    18px 42px,
-    72px 116px;
-  background-size:
-    140px 180px,
-    210px 260px;
-}
-
-.nebula {
-  position: absolute;
-  width: 42%;
-  height: 58%;
-  filter: blur(20px);
-  opacity: 0.45;
-  transform: rotate(16deg);
-}
-
-.nebula-a {
-  top: -5%;
-  left: 2%;
-  background: linear-gradient(180deg, rgba(173, 222, 255, 0.6), transparent);
-}
-
-.nebula-b {
-  top: 12%;
-  right: 12%;
-  background: linear-gradient(180deg, rgba(119, 167, 205, 0.5), transparent);
-}
-
-.planet {
-  position: absolute;
-  left: 50%;
-  top: 43%;
-  width: min(116cqw, 620px);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  transform: translateX(-50%);
-  background:
-    radial-gradient(circle at 35% 35%, rgba(54, 156, 191, 0.35), transparent 28%),
-    radial-gradient(circle at 72% 62%, rgba(27, 120, 171, 0.5), transparent 28%),
-    linear-gradient(145deg, #04334b, #0a4860 50%, #031f31);
-  box-shadow:
-    inset -38px -48px 80px rgba(0, 0, 0, 0.5),
-    inset 30px 24px 54px rgba(133, 220, 255, 0.12),
-    0 0 90px rgba(50, 169, 209, 0.18);
-  opacity: 0.9;
-}
-
-.orbit {
-  position: absolute;
-  left: 50%;
-  top: 55%;
-  width: 150cqw;
-  height: 24px;
-  border-radius: 50%;
-  background: linear-gradient(
-    90deg,
-    #02060d 0%,
-    #040912 45%,
-    #5541a8 52%,
-    #050914 62%,
-    #02060d 100%
-  );
-  box-shadow: 0 0 16px rgba(104, 86, 185, 0.55);
-  transform-origin: center;
-}
-
-.orbit-a {
-  transform: translate(-50%, -50%) rotate(14deg);
-}
-
-.orbit-b {
-  top: 48%;
-  height: 10px;
-  opacity: 0.65;
-  transform: translate(-50%, -50%) rotate(18deg);
-}
-
 .menu-screen,
 .archive-screen {
   position: relative;
   min-height: 100%;
-  padding: max(18px, env(safe-area-inset-top)) clamp(18px, 5cqw, 34px)
-    max(24px, env(safe-area-inset-bottom));
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -495,8 +385,8 @@ onMounted(() => {
   align-items: flex-end;
   justify-content: space-between;
   min-height: 116px;
-  margin: calc(-1 * max(18px, env(safe-area-inset-top))) calc(-1 * clamp(18px, 5cqw, 34px)) 0;
-  padding: max(24px, env(safe-area-inset-top)) clamp(28px, 7cqw, 56px) 24px;
+  margin: 0 calc(-1 * clamp(18px, 5cqw, 34px)) 0;
+  padding: 0 clamp(28px, 7cqw, 56px) 24px;
   background: rgba(5, 16, 26, 0.64);
   box-shadow: inset 0 -1px 0 rgba(203, 233, 255, 0.08);
 }

@@ -23,6 +23,7 @@ import {
   getFinalScore,
 } from './gameLogic'
 import type { GameMode, GameRecords, HighScoreEntry } from './types'
+import GameContainer from '../../components/GameContainer.vue'
 import { ITEM_COLORS } from './types'
 
 const GAME_ID = 'star-catcher'
@@ -103,8 +104,6 @@ function gameLoop(time: number) {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-  renderer.drawBackground(ctx, canvas.width, canvas.height, time)
-
   particleSystem.drawStars(ctx, time)
 
   for (const item of gameState.items) {
@@ -153,12 +152,7 @@ function processTap(tapX: number, tapY: number) {
   if (gameState.phase !== 'playing') return
 
   const wasShieldActive = gameState.shieldActive
-  const result = handleTap(
-    tapX,
-    tapY,
-    canvasRef.value?.width ?? 400,
-    canvasRef.value?.height ?? 600
-  )
+  const result = handleTap(tapX, tapY)
 
   if (!result.hit) return
 
@@ -424,7 +418,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="play-page" :style="{ backgroundImage: `url(${bgUrl})` }">
+  <GameContainer :bg-image="bgUrl">
     <div class="play-inner">
       <div class="hud">
         <button class="pause-button" type="button" aria-label="暂停" @click="pauseGame">
@@ -530,31 +524,14 @@ onUnmounted(() => {
         </div>
       </div>
     </Transition>
-  </div>
+  </GameContainer>
 </template>
 
 <style scoped>
-.play-page {
-  position: relative;
-  height: 100%;
-  overflow: hidden;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  color: #fff;
-}
-
 .play-inner {
-  height: 100%;
-  aspect-ratio: 3 / 4;
-  margin: 0 auto;
-  max-width: 100%;
-  container-type: inline-size;
-  container-name: game;
   display: flex;
   flex-direction: column;
-  position: relative;
-  z-index: 1;
+  height: 100%;
 }
 
 .hud {
@@ -568,7 +545,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   min-height: 86px;
-  padding: max(12px, env(safe-area-inset-top)) 16px 12px;
+  padding: 12px 16px 12px;
   background: linear-gradient(90deg, rgba(4, 11, 19, 0.7), rgba(9, 26, 39, 0.54));
   box-shadow: inset 0 -1px 0 rgba(205, 239, 255, 0.08);
   pointer-events: none;
@@ -696,13 +673,13 @@ onUnmounted(() => {
 }
 
 .overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: max(22px, env(safe-area-inset-top)) 22px max(26px, env(safe-area-inset-bottom));
+  padding: 22px 22px 26px;
   box-sizing: border-box;
   background: rgba(3, 10, 18, 0.68);
 }
@@ -726,8 +703,7 @@ onUnmounted(() => {
 .pause-panel {
   width: 100%;
   min-height: 100%;
-  padding: max(98px, calc(env(safe-area-inset-top) + 72px)) clamp(26px, 7cqw, 56px)
-    max(36px, env(safe-area-inset-bottom));
+  padding: 98px clamp(26px, 7cqw, 56px) 36px;
   box-sizing: border-box;
   background: linear-gradient(180deg, rgba(4, 12, 20, 0.84), rgba(3, 9, 16, 0.76));
 }
@@ -915,7 +891,7 @@ onUnmounted(() => {
 
 .combo-counter {
   position: absolute;
-  top: calc(max(86px, env(safe-area-inset-top) + 74px) + 10px);
+  top: 84px;
   left: 50%;
   z-index: 20;
   padding: 5px 12px;

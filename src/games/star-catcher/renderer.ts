@@ -59,15 +59,3 @@ export function drawItem(ctx: CanvasRenderingContext2D, item: FallingItem, _time
 
   ctx.restore()
 }
-
-export function drawBackground(
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  time: number
-) {
-  void ctx
-  void width
-  void height
-  void time
-}

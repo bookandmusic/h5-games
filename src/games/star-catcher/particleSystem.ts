@@ -43,7 +43,6 @@ export const particleSystem = {
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 1,
-        maxLife: 1,
         size: Math.random() * 4 + 2,
         color,
         decay: 0.015 + Math.random() * 0.02,
@@ -69,7 +68,6 @@ export const particleSystem = {
       y,
       text,
       life: 1,
-      maxLife: 1,
       color,
       size,
     })
@@ -81,7 +79,6 @@ export const particleSystem = {
       y,
       value,
       life: 1,
-      maxLife: 1,
       combo,
     })
   },

@@ -198,9 +198,7 @@ export function updateGame(dt: number, _cw: number, _ch: number) {
 
 export function handleTap(
   tapX: number,
-  tapY: number,
-  _canvasWidth: number,
-  _canvasHeight: number
+  tapY: number
 ): {
   hit: boolean
   itemType: ItemType | null

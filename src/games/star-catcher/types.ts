@@ -26,7 +26,6 @@ export interface Particle {
   vx: number
   vy: number
   life: number
-  maxLife: number
   size: number
   color: string
   decay: number
@@ -46,7 +45,6 @@ export interface FloatingText {
   y: number
   text: string
   life: number
-  maxLife: number
   color: string
   size: number
 }
@@ -56,7 +54,6 @@ export interface ScorePopup {
   y: number
   value: number
   life: number
-  maxLife: number
   combo: number
 }
 
