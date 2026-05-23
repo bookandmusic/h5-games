@@ -11,7 +11,6 @@ export function useChessItems(
   onSpendUndo: () => Promise<boolean>,
   onSpendHint: () => Promise<boolean>,
   onGetAiMove: (side: PieceColor) => Move | null,
-  _onGenerateLegalMoves: (board: Board, color: PieceColor) => Move[],
   currentTurn: PieceColor
 ) {
   const showResultDialog = ref(false)
@@ -36,7 +35,7 @@ export function useChessItems(
     showResultDialog.value = false
   }
 
-  const handleHint = async (humanSide: PieceColor, _board: Board) => {
+  const handleHint = async (humanSide: PieceColor) => {
     if (!isSinglePlayer || currentTurn !== humanSide) return
     const spent = await onSpendHint()
     if (!spent) return

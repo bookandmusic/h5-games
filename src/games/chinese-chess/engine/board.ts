@@ -1,11 +1,23 @@
 import { BOARD_COLS, BOARD_ROWS } from '../constants'
-import type { Board, Move, Piece, PieceColor, PieceType } from '../types'
+import type { Board, Move, Piece, PieceColor, PieceType, Position } from '../types'
 
 const createPiece = (color: PieceColor, type: PieceType, index: number): Piece => ({
   id: `${color}-${type}-${index}`,
   color,
   type,
 })
+
+export const getGeneralPosition = (board: Board, color: PieceColor): Position | null => {
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
+      const piece = board[row][col]
+      if (piece?.type === 'general' && piece.color === color) {
+        return { row, col }
+      }
+    }
+  }
+  return null
+}
 
 export const cloneBoard = (board: Board): Board =>
   board.map((row) => row.map((piece) => (piece ? { ...piece } : null)))

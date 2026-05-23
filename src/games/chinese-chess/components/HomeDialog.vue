@@ -13,7 +13,7 @@ const emit = defineEmits<{
 }>()
 
 const difficultyOptions: Array<{ value: Difficulty; label: string }> = [
-  { value: 'easy', label: '初学茅庐' },
+  { value: 'easy', label: '初出茅庐' },
   { value: 'medium', label: '登堂入室' },
   { value: 'hard', label: '出神入化' },
   { value: 'hardest', label: '天人合一' },

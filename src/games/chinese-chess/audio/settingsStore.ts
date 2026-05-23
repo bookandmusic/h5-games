@@ -66,7 +66,7 @@ export const settingsStore = {
   },
 
   toggleAll() {
-    const next = !settings.sfxEnabled || !settings.musicEnabled ? true : false
+    const next = !(settings.sfxEnabled && settings.musicEnabled)
     settings.sfxEnabled = next
     settings.musicEnabled = next
     this.save()

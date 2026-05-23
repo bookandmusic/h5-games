@@ -8,6 +8,7 @@ import {
   BLACK_SIDE_ROWS,
 } from '../constants'
 import type { Board, Move, Piece, PieceColor, Position } from '../types'
+import { getGeneralPosition } from './board'
 
 const inBounds = (row: number, col: number) =>
   row >= 0 && row < BOARD_ROWS && col >= 0 && col < BOARD_COLS
@@ -34,18 +35,6 @@ const pushMoveIfValid = (
   const target = board[to.row][to.col]
   if (target && target.color === piece.color) return
   moves.push({ from, to, piece, captured: target })
-}
-
-const getGeneralPosition = (board: Board, color: PieceColor): Position | null => {
-  for (let row = 0; row < BOARD_ROWS; row += 1) {
-    for (let col = 0; col < BOARD_COLS; col += 1) {
-      const piece = board[row][col]
-      if (piece?.type === 'general' && piece.color === color) {
-        return { row, col }
-      }
-    }
-  }
-  return null
 }
 
 const getFlyingGeneralMove = (board: Board, piece: Piece, from: Position): Move | null => {

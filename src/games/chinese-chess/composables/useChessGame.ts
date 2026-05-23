@@ -19,7 +19,7 @@ export function useChessGame(
   baseUrl?: string
 ) {
   const state = useChessGameState()
-  const ai = useChessAI(state.board.value, state.currentTurn.value, state.winner.value)
+  const ai = useChessAI(state.board, state.currentTurn, state.winner)
   const persistence = useChessPersistence(gameId, route)
   const items = useChessItems(
     ai.isSinglePlayer.value,
@@ -38,7 +38,6 @@ export function useChessGame(
     () => persistence.spendItem('undo'),
     () => persistence.spendItem('hint'),
     ai.getHint,
-    generateLegalMoves,
     state.currentTurn.value
   )
 
@@ -142,11 +141,16 @@ export function useChessGame(
   const syncWinner = async () => {
     state.syncWinner()
     if (state.winner.value !== null) {
-      if (ai.activeMode.value === 'ai' && state.winner.value === ai.activeHumanSide.value) {
-        persistence.applyWinRewards(ai.activeDifficulty.value)
+      if (ai.activeMode.value === 'ai') {
+        if (state.winner.value === ai.activeHumanSide.value) {
+          persistence.applyWinRewards(ai.activeDifficulty.value)
+        } else {
+          persistence.applyLossReset()
+        }
       } else {
-        persistence.applyLossReset()
+        persistence.applyWinRewards('medium')
       }
+      await persistence.persistProfile()
       await persistence.clearGameState(ai.activeMode.value)
       items.showResultDialog.value = true
     }
@@ -169,7 +173,7 @@ export function useChessGame(
     if (state.winner.value !== null || ai.thinking.value || ai.canHumanAct.value === false) return
     if (animatingMove.value !== null) return
 
-    const move = state.handleSelect(pos, ai.canHumanAct.value, animatingMove.value !== null)
+    const move = state.handleSelect(pos, ai.canHumanAct.value)
     if (move) {
       startAttackAnimation(move)
       return
@@ -203,6 +207,8 @@ export function useChessGame(
   }
 
   const handleRestart = async () => {
+    ai.clearAiTimer()
+    ai.thinking.value = false
     await persistence.clearGameState(ai.activeMode.value)
     state.resetBoard()
     items.pendingSetupMode.value = ai.activeMode.value
@@ -229,7 +235,7 @@ export function useChessGame(
   }
 
   const handleHint = async () => {
-    await items.handleHint(ai.activeHumanSide.value, state.board.value)
+    await items.handleHint(ai.activeHumanSide.value)
     if (state.hintMove.value) {
       state.selected.value = state.hintMove.value.from
       state.legalMoves.value = generateLegalMoves(
@@ -329,7 +335,6 @@ export function useChessGame(
     showExitConfirm: items.showExitConfirm,
     showStartSetup: items.showStartSetup,
     animatingMove,
-    aiTimer: ai.aiTimer,
     aiSide: ai.aiSide,
     isAiTurn: ai.isAiTurn,
     isSinglePlayer: ai.isSinglePlayer,

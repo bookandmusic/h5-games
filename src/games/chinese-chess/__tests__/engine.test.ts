@@ -7,6 +7,7 @@ import {
   generateLegalMoves,
   getWinner,
   isInCheck,
+  isOpponentInCheck,
 } from '../engine'
 import type { Board, PieceColor, PieceType } from '../types'
 
@@ -171,6 +172,24 @@ describe('chinese chess engine', () => {
         expect(cannonMoves.some((m) => m.to.row === 0 && m.to.col === 4)).toBe(true)
         expect(cannonMoves.every((m) => !m.captured)).toBe(true)
       })
+
+      it('captures by jumping over exactly one piece', () => {
+        const board = createEmptyBoard()
+        place(board, 9, 4, 'red', 'general')
+        place(board, 0, 3, 'black', 'general')
+        place(board, 9, 1, 'red', 'cannon')
+        place(board, 7, 1, 'red', 'soldier')
+        place(board, 4, 1, 'black', 'chariot')
+
+        const moves = generateLegalMoves(board, 'red')
+        const cannonMoves = moves.filter((m) => m.piece.type === 'cannon')
+
+        expect(
+          cannonMoves.some(
+            (m) => m.to.row === 4 && m.to.col === 1 && m.captured?.type === 'chariot'
+          )
+        ).toBe(true)
+      })
     })
 
     describe('soldier (卒/兵)', () => {
@@ -228,6 +247,15 @@ describe('chinese chess engine', () => {
       const generalMoves = moves.filter((m) => m.piece.type === 'general')
 
       expect(generalMoves.every((m) => m.to.col !== 4 || m.to.row !== 8)).toBe(true)
+    })
+
+    it('detects opponent in check after move', () => {
+      const board = createEmptyBoard()
+      place(board, 9, 4, 'red', 'general')
+      place(board, 0, 3, 'black', 'general')
+      place(board, 4, 3, 'red', 'chariot')
+
+      expect(isOpponentInCheck(board, 'red')).toBe(true)
     })
   })
 

@@ -1,25 +1,10 @@
 import { BOARD_COLS, BOARD_ROWS } from '../constants'
 import type { Board, Move, PieceColor, Side } from '../types'
-import { applyMove } from './board'
+import { applyMove, getGeneralPosition } from './board'
 import { generatePseudoLegalMoves } from './moves'
 
-const samePosition = (a: { row: number; col: number }, b: { row: number; col: number }) =>
+export const samePosition = (a: { row: number; col: number }, b: { row: number; col: number }) =>
   a.row === b.row && a.col === b.col
-
-const getGeneralPosition = (
-  board: Board,
-  color: PieceColor
-): { row: number; col: number } | null => {
-  for (let row = 0; row < BOARD_ROWS; row += 1) {
-    for (let col = 0; col < BOARD_COLS; col += 1) {
-      const piece = board[row][col]
-      if (piece?.type === 'general' && piece.color === color) {
-        return { row, col }
-      }
-    }
-  }
-  return null
-}
 
 export const hasGeneral = (board: Board, color: PieceColor) => {
   return getGeneralPosition(board, color) !== null
@@ -91,7 +76,7 @@ export const getWinner = (board: Board, currentTurn: PieceColor): Side | null =>
   return null
 }
 
-export const isCheckmateThreat = (board: Board, currentTurn: PieceColor) => {
+export const isOpponentInCheck = (board: Board, currentTurn: PieceColor) => {
   const next: PieceColor = currentTurn === 'red' ? 'black' : 'red'
   return isInCheck(board, next)
 }

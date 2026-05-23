@@ -23,17 +23,6 @@ export function useChessGameState() {
 
   const inCheck = computed(() => winner.value === null && isInCheck(board.value, currentTurn.value))
 
-  const isBoardLocked = computed(() => winner.value !== null || canHumanAct() === false)
-
-  const statusText = computed(() => {
-    if (winner.value !== null) return (winner.value === 'red' ? '红方' : '黑方') + '获胜'
-    const turn = currentTurn.value === 'red' ? '红方' : '黑方'
-    const check = inCheck.value ? ' · 将军！' : ''
-    return turn + check
-  })
-
-  const canHumanAct = () => true
-
   const clearSelection = () => {
     selected.value = null
     legalMoves.value = []
@@ -61,8 +50,8 @@ export function useChessGameState() {
     winner.value = getWinner(board.value, currentTurn.value)
   }
 
-  const handleSelect = (pos: Position, isHumanTurn: boolean, isAnimating: boolean) => {
-    if (winner.value !== null || !isHumanTurn || isAnimating) return
+  const handleSelect = (pos: Position, isHumanTurn: boolean) => {
+    if (winner.value !== null || !isHumanTurn) return
 
     const piece = board.value[pos.row][pos.col]
     const existingMove = selected.value
@@ -115,9 +104,6 @@ export function useChessGameState() {
     moveHistory,
     hintMove,
     inCheck,
-    isBoardLocked,
-    statusText,
-    canHumanAct,
     clearSelection,
     saveHistory,
     commitMove,

@@ -1,9 +1,13 @@
-import { computed, ref } from 'vue'
+import { type Ref, computed, ref } from 'vue'
 
 import { chooseAiMove } from '../ai'
 import type { Board, Difficulty, GameMode, Move, PieceColor } from '../types'
 
-export function useChessAI(board: Board, currentTurn: PieceColor, winner: PieceColor | null) {
+export function useChessAI(
+  board: Ref<Board>,
+  currentTurn: Ref<PieceColor>,
+  winner: Ref<PieceColor | null>
+) {
   const thinking = ref(false)
   const activeMode = ref<GameMode>('ai')
   const activeDifficulty = ref<Difficulty>('medium')
@@ -14,13 +18,13 @@ export function useChessAI(board: Board, currentTurn: PieceColor, winner: PieceC
   const aiSide = computed<PieceColor>(() => (activeHumanSide.value === 'red' ? 'black' : 'red'))
 
   const isAiTurn = computed(
-    () => activeMode.value === 'ai' && winner === null && currentTurn === aiSide.value
+    () => activeMode.value === 'ai' && winner.value === null && currentTurn.value === aiSide.value
   )
 
   const isSinglePlayer = computed(() => activeMode.value === 'ai')
 
   const canHumanAct = computed(
-    () => activeMode.value === 'local' || currentTurn === activeHumanSide.value
+    () => activeMode.value === 'local' || currentTurn.value === activeHumanSide.value
   )
 
   const clearAiTimer = () => {
@@ -30,22 +34,32 @@ export function useChessAI(board: Board, currentTurn: PieceColor, winner: PieceC
     }
   }
 
+  const getAiDelay = () => {
+    switch (activeDifficulty.value) {
+      case 'easy':
+        return 500 + Math.random() * 800
+      case 'medium':
+        return 1000 + Math.random() * 1200
+      case 'hard':
+        return 1500 + Math.random() * 2000
+      case 'hardest':
+        return 2000 + Math.random() * 2500
+    }
+  }
+
   const performAiMove = (onMove: (move: Move) => void, onSyncWinner: () => void) => {
     if (!isAiTurn.value || thinking.value) return
     thinking.value = true
-    aiTimer = window.setTimeout(
-      () => {
-        const move = chooseAiMove(board, currentTurn, activeDifficulty.value)
-        thinking.value = false
-        aiTimer = null
-        if (!move) {
-          onSyncWinner()
-          return
-        }
-        onMove(move)
-      },
-      1500 + Math.random() * 2000
-    )
+    aiTimer = window.setTimeout(() => {
+      const move = chooseAiMove(board.value, currentTurn.value, activeDifficulty.value)
+      thinking.value = false
+      aiTimer = null
+      if (!move) {
+        onSyncWinner()
+        return
+      }
+      onMove(move)
+    }, getAiDelay())
   }
 
   const startGame = (config: {
@@ -61,10 +75,10 @@ export function useChessAI(board: Board, currentTurn: PieceColor, winner: PieceC
   }
 
   const getHint = (): Move | null => {
-    if (!isSinglePlayer.value || currentTurn !== activeHumanSide.value) {
+    if (!isSinglePlayer.value || currentTurn.value !== activeHumanSide.value) {
       return null
     }
-    return chooseAiMove(board, activeHumanSide.value, activeDifficulty.value)
+    return chooseAiMove(board.value, activeHumanSide.value, activeDifficulty.value)
   }
 
   return {
@@ -72,7 +86,6 @@ export function useChessAI(board: Board, currentTurn: PieceColor, winner: PieceC
     activeMode,
     activeDifficulty,
     activeHumanSide,
-    aiTimer,
     aiSide,
     isAiTurn,
     isSinglePlayer,

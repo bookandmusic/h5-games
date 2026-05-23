@@ -28,10 +28,10 @@ describe('chinese chess ai', () => {
     vi.restoreAllMocks()
   })
 
-  it.each<Difficulty>(['easy', 'medium', 'hard'])(
+  it.each<Difficulty>(['easy', 'medium', 'hard', 'hardest'])(
     'avoids hanging a major piece on %s difficulty',
     (difficulty) => {
-      vi.spyOn(Math, 'random').mockReturnValue(0)
+      vi.spyOn(Math, 'random').mockReturnValue(0.5)
 
       const board = createEmptyBoard()
       placePiece(board, 0, 4, 'black', 'general')
@@ -50,10 +50,10 @@ describe('chinese chess ai', () => {
     }
   )
 
-  it.each<Difficulty>(['easy', 'medium', 'hard'])(
+  it.each<Difficulty>(['easy', 'medium', 'hard', 'hardest'])(
     'takes an immediate winning move on %s difficulty',
     (difficulty) => {
-      vi.spyOn(Math, 'random').mockReturnValue(0)
+      vi.spyOn(Math, 'random').mockReturnValue(0.5)
 
       const board = createEmptyBoard()
       placePiece(board, 0, 3, 'black', 'general')
@@ -68,4 +68,17 @@ describe('chinese chess ai', () => {
       expect(move?.captured?.type).toBe('general')
     }
   )
+
+  it('hardest difficulty captures the general with chariot', () => {
+    const board = createEmptyBoard()
+    placePiece(board, 0, 3, 'black', 'general')
+    placePiece(board, 9, 4, 'red', 'general')
+    placePiece(board, 8, 4, 'black', 'chariot')
+
+    const move = chooseAiMove(board, 'black', 'hardest')
+
+    expect(move).not.toBeNull()
+    expect(move?.to).toEqual({ row: 9, col: 4 })
+    expect(move?.captured?.type).toBe('general')
+  })
 })

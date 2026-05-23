@@ -1,12 +1,9 @@
 import type { Board, Move, PieceColor } from '../types'
 import { applyMove } from '../engine/board'
-import { generateLegalMoves, getWinner, isCheckmateThreat } from '../engine/judge'
+import { generateLegalMoves, getWinner, isOpponentInCheck, samePosition } from '../engine/judge'
 import { evaluateBoard, pieceValue } from './evaluate'
 
 const getOpponent = (color: PieceColor): PieceColor => (color === 'red' ? 'black' : 'red')
-
-const samePosition = (a: { row: number; col: number }, b: { row: number; col: number }) =>
-  a.row === b.row && a.col === b.col
 
 const moveHeuristic = (move: Move) => {
   let score = 0
@@ -81,12 +78,15 @@ const assessMove = (board: Board, color: PieceColor, move: Move): MoveAssessment
 
   const boardScore = evaluateBoard(nextBoard, color)
   const tacticalGain = move.captured ? pieceValue(move.captured.type) * 12 : 0
-  const checkingBonus = isCheckmateThreat(nextBoard, color) ? 180 : 0
+  const checkingBonus = isOpponentInCheck(nextBoard, color) ? 180 : 0
   const progressBonus = moveHeuristic(move)
   const replyThreat = getImmediateReplyThreat(nextBoard, color)
   const movedPieceThreat = getMovedPieceThreat(nextBoard, color, move.to)
-  const movedPieceRisk =
-    movedPieceThreat > 0 ? movedPieceThreat + Math.floor(pieceValue(move.piece.type) * 0.4) : 0
+  const capturedValue = move.captured ? pieceValue(move.captured.type) : 0
+  const myPieceValue = pieceValue(move.piece.type)
+  const exchangeGain = capturedValue - myPieceValue
+  const netThreat = Math.max(0, movedPieceThreat - Math.max(0, exchangeGain))
+  const movedPieceRisk = movedPieceThreat > 0 ? netThreat + Math.floor(myPieceValue * 0.2) : 0
   const blunderPenalty = replyThreat + movedPieceRisk
 
   return {
@@ -157,10 +157,7 @@ const negamax = (
   for (const move of moves) {
     const nextBoard = applyMove(board, move)
     const child = negamax(nextBoard, getOpponent(color), depth - 1, -beta, -alpha)
-    let score = -child.score
-
-    if (move.captured) score += pieceValue(move.captured.type) * 2
-    if (isCheckmateThreat(nextBoard, color)) score += 140
+    const score = -child.score
 
     if (score > bestScore) {
       bestScore = score
@@ -201,7 +198,7 @@ const pickMediumMove = (board: Board, color: PieceColor, assessments: MoveAssess
 
 const pickHardMove = (board: Board, color: PieceColor, assessments: MoveAssessment[]) => {
   const moves = assessments.map((item) => item.move)
-  const depth = moves.length <= 10 ? 4 : moves.length <= 24 ? 3 : 2
+  const depth = moves.length <= 16 ? 3 : 2
   return negamax(board, color, depth, -Infinity, Infinity).move ?? assessments[0]?.move ?? null
 }
 
