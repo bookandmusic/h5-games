@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useGameNavigation } from '../../composables/useGameNavigation'
+import GameContainer from '../../components/GameContainer.vue'
 import './theme.css'
 
 const GAME_ID = '2048'
@@ -7,7 +8,7 @@ const nav = useGameNavigation(GAME_ID)
 </script>
 
 <template>
-  <div class="home-page theme-2048-surface">
+  <GameContainer bg-class="theme-2048-surface">
     <div class="home-inner">
       <div class="logo-lockup" aria-hidden="true">
         <div class="logo-row">
@@ -59,35 +60,17 @@ const nav = useGameNavigation(GAME_ID)
         </div>
       </div>
     </div>
-  </div>
+  </GameContainer>
 </template>
 
 <style scoped>
-.home-page {
-  height: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  position: relative;
-  overflow: hidden;
-}
-
 .home-inner {
-  position: relative;
-  z-index: 1;
   height: 100%;
-  aspect-ratio: 3 / 4;
-  max-width: 100%;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 78px;
-  padding: 0 18px 24px;
-  padding-top: max(clamp(24px, 8vh, 72px), env(safe-area-inset-top));
-  box-sizing: border-box;
+  padding: 0;
 }
 
 .logo-lockup {
@@ -96,14 +79,13 @@ const nav = useGameNavigation(GAME_ID)
   align-items: center;
   justify-content: center;
   width: min(100%, 340px);
-  min-height: 112px;
+  min-height: 130px;
 }
 
 .logo-row {
-  position: relative;
   display: flex;
   gap: 9px;
-  align-items: center;
+  align-items: flex-end;
   padding-right: 38px;
 }
 
@@ -129,16 +111,13 @@ const nav = useGameNavigation(GAME_ID)
 }
 
 .logo-tile-0 {
-  position: absolute;
   z-index: 2;
-  top: clamp(-36px, -10vw, -42px);
-  left: clamp(48px, 14vw, 60px);
+  margin-bottom: clamp(24px, 7vw, 34px);
   background: #f67256;
   transform: rotate(30deg);
 }
 
 .logo-tile-4 {
-  margin-left: 40px;
   background: #c96749;
 }
 
@@ -251,10 +230,10 @@ const nav = useGameNavigation(GAME_ID)
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-@media (max-width: 420px) {
+@container game (max-width: 400px) {
   .home-inner {
     gap: 48px;
-    padding: clamp(18px, 6vh, 48px) 14px 22px;
+    padding: 0;
   }
 
   .logo-lockup {
@@ -277,10 +256,10 @@ const nav = useGameNavigation(GAME_ID)
   }
 }
 
-@media (min-width: 768px) {
+@container game (min-width: 740px) {
   .home-inner {
     gap: 96px;
-    padding: clamp(32px, 10vh, 88px) 22px 28px;
+    padding: 0;
   }
 
   .logo-lockup {
@@ -300,12 +279,7 @@ const nav = useGameNavigation(GAME_ID)
   }
 
   .logo-tile-0 {
-    top: -48px;
-    left: 70px;
-  }
-
-  .logo-tile-4 {
-    margin-left: 48px;
+    margin-bottom: 32px;
   }
 
   .logo-label {
@@ -337,10 +311,10 @@ const nav = useGameNavigation(GAME_ID)
   }
 }
 
-@media (min-width: 1024px) {
+@container game (min-width: 990px) {
   .home-inner {
     gap: 128px;
-    padding: clamp(48px, 14vh, 120px) 30px 36px;
+    padding: 0;
   }
 
   .logo-lockup {
@@ -360,12 +334,7 @@ const nav = useGameNavigation(GAME_ID)
   }
 
   .logo-tile-0 {
-    top: -60px;
-    left: 90px;
-  }
-
-  .logo-tile-4 {
-    margin-left: 64px;
+    margin-bottom: 40px;
   }
 
   .logo-label {
@@ -397,10 +366,10 @@ const nav = useGameNavigation(GAME_ID)
   }
 }
 
-@media (min-width: 1440px) {
+@container game (min-width: 1410px) {
   .home-inner {
     gap: 148px;
-    padding: clamp(56px, 16vh, 140px) 34px 40px;
+    padding: 0;
   }
 
   .logo-lockup {
@@ -420,12 +389,7 @@ const nav = useGameNavigation(GAME_ID)
   }
 
   .logo-tile-0 {
-    top: -70px;
-    left: 104px;
-  }
-
-  .logo-tile-4 {
-    margin-left: 74px;
+    margin-bottom: 48px;
   }
 
   .logo-label {

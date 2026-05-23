@@ -2,9 +2,7 @@ import type { GameCell, HammerTarget, MoveDirection } from './types'
 
 export const SIZE = 4
 
-function getSpawnConfig(): { two: number; four: number } {
-  return { two: 0.95, four: 0.05 }
-}
+const SPAWN_CONFIG = { two: 0.95, four: 0.05 } as const
 
 export function createEmptyGrid(createId: () => number): GameCell[][] {
   return Array.from({ length: SIZE }, () =>
@@ -25,10 +23,8 @@ export function getEmptyCells(grid: GameCell[][]): Array<{ row: number; col: num
 }
 
 export function getNewCellValue(randomValue = Math.random()): number {
-  const config = getSpawnConfig()
-
-  if (randomValue < config.two) return 2
-  if (randomValue < config.two + config.four) return 4
+  if (randomValue < SPAWN_CONFIG.two) return 2
+  if (randomValue < SPAWN_CONFIG.two + SPAWN_CONFIG.four) return 4
   return 8
 }
 

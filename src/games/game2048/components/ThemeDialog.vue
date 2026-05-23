@@ -7,6 +7,8 @@ defineEmits<{
   close: []
 }>()
 
+const ICON_TILE_VALUES = [2, 4, 8]
+
 const preloadedIconSources = new Set<string>()
 
 const preloadThemeIcons = (themeToLoad: GameTheme) => {
@@ -23,15 +25,22 @@ const preloadThemeIcons = (themeToLoad: GameTheme) => {
   })
 }
 
+const getTileSrc = (themeValue: Theme, tileValue: number): string | undefined => {
+  const theme = getTheme(themeValue)
+  if (!theme.useIcons || !theme.iconMap) return undefined
+  return theme.iconMap[tileValue]
+}
+
 const selectTheme = (t: Theme) => {
   settingsStore.setTheme(t)
   preloadThemeIcons(getTheme(t))
 }
 
-const themeOptions: { value: Theme; label: string; tiles: string[] }[] = [
-  { value: 'default', label: '经典 2048', tiles: ['2', '128', '2048'] },
-  { value: 'energy', label: '机械纪元', tiles: ['核心', '机兵', '神机'] },
-  { value: 'deity', label: '神祇进阶', tiles: ['神使', '骑士', '神祇'] },
+const themeOptions: { value: Theme; label: string }[] = [
+  { value: 'default', label: '经典 2048' },
+  { value: 'energy', label: '机械纪元' },
+  { value: 'deity', label: '神祇进阶' },
+  { value: 'undead', label: '亡灵天灾' },
 ]
 </script>
 
@@ -60,14 +69,20 @@ const themeOptions: { value: Theme; label: string; tiles: string[] }[] = [
           @click="selectTheme(opt.value)"
         >
           <div class="theme-option-preview" :class="opt.value">
-            <span
-              v-for="tile in opt.tiles"
-              :key="tile"
-              class="theme-option-tile"
-              :class="opt.value"
-            >
-              {{ tile }}
-            </span>
+            <template v-for="v in ICON_TILE_VALUES" :key="v">
+              <img
+                v-if="getTileSrc(opt.value, v)"
+                :src="getTileSrc(opt.value, v)!"
+                :alt="String(v)"
+                class="theme-option-tile-img"
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+              />
+              <span v-else class="theme-option-tile" :class="opt.value">
+                {{ v }}
+              </span>
+            </template>
           </div>
           <span class="theme-option-label">{{ opt.label }}</span>
           <span v-if="settingsStore.theme === opt.value" class="theme-check">
@@ -205,6 +220,10 @@ const themeOptions: { value: Theme; label: string; tiles: string[] }[] = [
   background: linear-gradient(135deg, #f5e6b8 0%, #d4a84f 38%, #5c3b1e 100%);
 }
 
+.theme-option-preview.undead {
+  background: linear-gradient(135deg, #475569 0%, #1e293b 50%, #0f0a0a 100%);
+}
+
 .theme-option-tile {
   flex: 1;
   aspect-ratio: 1;
@@ -215,7 +234,7 @@ const themeOptions: { value: Theme; label: string; tiles: string[] }[] = [
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: clamp(8px, 4cqi, 14px);
   font-weight: 700;
   letter-spacing: 0.02em;
   backdrop-filter: blur(8px);
@@ -226,16 +245,16 @@ const themeOptions: { value: Theme; label: string; tiles: string[] }[] = [
   color: #7c5220;
 }
 
-.theme-option-tile.energy {
-  background: rgba(15, 23, 42, 0.52);
-  color: #cffafe;
-  box-shadow: 0 0 8px rgba(34, 211, 238, 0.2);
-}
-
-.theme-option-tile.deity {
-  background: rgba(28, 25, 23, 0.6);
-  color: #fef3c7;
-  border: 1px solid rgba(245, 230, 184, 0.22);
+.theme-option-tile-img {
+  flex: 1;
+  aspect-ratio: 1;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  border-radius: 5px;
 }
 
 .theme-option-label {

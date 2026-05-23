@@ -1,4 +1,4 @@
-export type Theme = 'default' | 'energy' | 'deity'
+export type Theme = 'default' | 'energy' | 'deity' | 'undead'
 export type GameStatus = 'playing' | 'won' | 'lost'
 export type MoveDirection = 'up' | 'down' | 'left' | 'right'
 
