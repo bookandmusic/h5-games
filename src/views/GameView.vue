@@ -179,8 +179,6 @@ onBeforeRouteLeave(async (to, from) => {
 .game-shell {
   height: 100vh;
   height: 100dvh;
-  min-height: 100vh;
-  min-height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;

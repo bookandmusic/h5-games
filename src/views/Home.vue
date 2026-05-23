@@ -154,6 +154,7 @@ const hasResults = computed(() => store.filteredGames.length > 0)
   min-height: 0;
   position: relative;
   z-index: 1;
+  padding: 0 clamp(14px, 3.5vw, 28px);
 }
 
 /* Background decorations */
@@ -170,6 +171,17 @@ const hasResults = computed(() => store.filteredGames.length > 0)
   position: relative;
   z-index: 10;
   overflow: hidden;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.curtain::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: #d0bce8;
 }
 
 .curtain-wave {
@@ -187,6 +199,9 @@ const hasResults = computed(() => store.filteredGames.length > 0)
   position: absolute;
   inset: 0;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .curtain-bar-inner {
@@ -195,8 +210,7 @@ const hasResults = computed(() => store.filteredGames.length > 0)
   margin-inline: auto;
   display: flex;
   align-items: center;
-  padding: 0 16px 6px;
-  padding-top: max(6px, env(safe-area-inset-top));
+  padding: 6px 16px;
   gap: 8px;
 }
 
@@ -293,7 +307,7 @@ const hasResults = computed(() => store.filteredGames.length > 0)
 .list {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 16px calc(env(safe-area-inset-bottom, 16px) + 16px);
+  padding: 12px 0 calc(env(safe-area-inset-bottom, 16px) + 16px);
   position: relative;
   z-index: 1;
 }
@@ -333,7 +347,7 @@ const hasResults = computed(() => store.filteredGames.length > 0)
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60px 16px;
+  padding: 60px 0;
 }
 
 .empty-title {

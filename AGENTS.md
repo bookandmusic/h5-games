@@ -24,12 +24,20 @@ npm run format           # Prettier 格式化
 npm run test:run         # Vitest 测试（单次运行）
 ```
 
+## 开发环境
+
+- **Android 模拟器**：`adb connect 10.10.3.6:5555`，远程查看 `http://10.10.3.6:6080/vnc.html`
+- **Tauri 开发**：`source ~/.zshrc && npx tauri android dev`（自动通过 ADB 发现模拟器，devUrl 指向 `http://10.10.3.2:5173`）
+- **Rust**：通过 `mise` 管理，项目根目录有 `mise.toml`
+- **Android SDK**：`/opt/android-sdk`（platforms;android-34 + build-tools + NDK 27），环境变量已写入 `~/.zshrc`
+
 ## 核心原则
 
 - **禁止未经确认直接编码**：任何代码修改必须先提出计划 → 等待用户确认 → 才能实现
-- **需求不明确时严禁猜测**：必须使用 `question` 工具询问用户
+- **需求不明确时严禁猜测**：必须使用 `question` 工具询问用户，不得自行假设
 - **存在多个实现方案时**：必须先列出所有方案并推荐一个，说明理由和 Tradeoff
 - **复杂任务必须加载 skill**：新游戏、新功能、架构变更前，先 `skill asking-questions` 或 `skill brainstorming`
+- **与用户交流始终使用简体中文**，保持专业简洁；代码中保持英文风格，注释写中文
 
 ## 任务处理流程
 
@@ -67,10 +75,12 @@ npm run preflight && npm run format
 
 1. **每个游戏必须自带退出按钮**（Android 返回键 + 按钮并存，Desktop 无返回键）
 2. 使用 `useGameNavigation` composable 处理退出和页面跳转
-3. 游戏内响应式**必须使用 Container Queries**，禁止 `@media` 做游戏内布局
-4. 游戏内输入**必须使用 Pointer Events**，统一触摸屏和鼠标
-5. 图片/音频生成**必须逐张/逐个调用**，禁止并行（会撑爆显存）
-6. Vision API 分析**必须串行执行**，两次请求间隔至少 5 秒
+3. **所有游戏页面必须使用 `GameContainer.vue` 作为外层容器**，禁止自行实现容器布局。默认 3:4 竖屏，需要其他宽高比通过 CSS 变量覆盖
+4. **游戏根容器禁止添加 padding**，间距统一由 `GameContainer.vue` 控制（左右 `clamp(14px, 3.5vw, 28px)`，顶部底部安全区域保护）。极端情况下可通过 CSS 变量（`--gc-padding-*`、`--gc-aspect-ratio`）覆盖
+5. 游戏内响应式**必须使用 Container Queries**，禁止 `@media` 做游戏内布局
+6. 游戏内输入**必须使用 Pointer Events**，统一触摸屏和鼠标
+7. 图片/音频生成**必须逐张/逐个调用**，禁止并行（会撑爆显存）
+8. Vision API 分析**必须串行执行**，两次请求间隔至少 5 秒
 
 ## Skill 临时产物管理
 

@@ -6,11 +6,11 @@
 
 | 层级 | 适配方式 | 职责 |
 |------|---------|------|
-| 外层容器（`.game-page`） | `height: 100%; width: 100%` | 填满视口，无约束 |
-| 内容容器（`.game-content`） | `aspect-ratio` + `max-width` + 居中 | 固定宽高比，letterbox 留白 |
+| 页面容器（`GameContainer.vue`） | `height: 100dvh` + padding + 背景 | 填满视口，提供统一间距和安全区域保护 |
+| 内容容器（`.game-inner`） | `aspect-ratio: 3/4` + `max-width: 100%` + 居中，CSS 变量可覆盖 | 固定宽高比，letterbox 留白 |
 | 游戏内部 UI | Container Queries、`cqw`/`cqh` | 响应式缩放与布局重构 |
 
-**核心思路**：外层自适应不做约束，内层按游戏类型选择宽高比居中显示。宽屏 PC 两侧留白是正常行为。游戏内部通过 Container Queries 感知容器尺寸，在不同档位下调整布局和字号。
+**核心思路**：所有游戏统一使用 `GameContainer.vue` 作为外层容器，它提供左右 padding `clamp(14px, 3.5vw, 28px)` 和安全区域保护。内层按 3:4 宽高比居中显示，需要其他宽高比通过 CSS 变量（`--gc-aspect-ratio`）覆盖。宽屏 PC 两侧留白是正常行为。游戏内部通过 Container Queries 感知容器尺寸，在不同档位下调整布局和字号。**游戏根容器禁止自行添加 padding**。
 
 ## 添加新游戏
 
@@ -61,64 +61,58 @@ src/games/<game-id>/
 
 ### 3. 容器布局约束
 
-游戏统一使用**双层容器结构**：外层全屏背景层 + 内层宽高比约束层。
-
-```html
-<div class="play-page">           <!-- 外层：全屏背景（或用 .game-container / .home-page） -->
-  <div class="play-inner">        <!-- 内层：宽高比约束（或用 .game-content-shell / .home） -->
-    <!-- 游戏内容 -->
-  </div>
-</div>
-```
-
-**各层职责**：
-
-| 层 | CSS | 说明 |
-|----|-----|------|
-| 外层（背景） | `height: 100%; width: 100%; overflow: hidden; position: relative` | 覆盖全屏，放置背景图/渐变/CSS 变量 |
-| 内层（约束） | `height: 100%; aspect-ratio: X / Y; max-width: 100%; margin: 0 auto` | 约束内容宽高比，居中显示 |
-
-> 站点外部容器（`GameView.vue` 的 `.game-shell`）不做宽度约束。
-
-**宽高比必须在开发前与用户确认**，预设选项：
-
-| 比例 | 适用场景 | 游戏类型举例 |
-|------|---------|-------------|
-| `9 / 16` | 竖屏手机（默认推荐） | 2048、记忆翻牌、竖向卷轴 |
-| `3 / 4` | iPad / 通用折中 | 大屏适配的通用方案 |
-| `1 / 1` | 方形棋盘 | 象棋、围棋 |
-| `16 / 9` | 横屏游戏 | 弹球、射击、赛车 |
-
-内层容器可用 `:style` 绑定实现动态宽高比，也可直接在 CSS 中硬编码：
+所有游戏必须使用 `GameContainer.vue` 作为外层容器。它提供统一的页面级 padding（左右 `clamp(14px, 3.5vw, 28px)`，顶部底部安全区域保护）和 3:4 宽高比约束（可通过 CSS 变量覆盖）。
 
 ```vue
 <template>
-  <div class="play-page">
-    <div class="play-inner" :style="{ aspectRatio: '3 / 4' }">
+  <GameContainer bg-class="my-game-bg">
+    <div class="my-game">                     <!-- 游戏根容器 → 禁止 padding -->
       <!-- 游戏内容 -->
     </div>
-  </div>
+  </GameContainer>
 </template>
 
+<script setup lang="ts">
+import GameContainer from '../../components/GameContainer.vue'
+</script>
+
 <style scoped>
-.play-page {
+.my-game {
   height: 100%;
-  width: 100%;
-  overflow: hidden;
-  position: relative;
-  /* 背景图/渐变在此定义 */
-}
-.play-inner {
-  height: 100%;
-  max-width: 100%;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
+  /* 注意：禁止自行添加 padding，由 GameContainer 统一控制 */
 }
 </style>
 ```
 
-> 参考 `src/games/chinese-chess/index.vue` 中 `.play-page` / `.play-inner` 和 `src/games/chinese-chess/Home.vue` 中 `.home-page` / `.home` 的实现。
+**游戏根容器禁止添加任何 padding**（包括 `padding-left`/`right`/`top`/`bottom`），间距统一由 `GameContainer.vue` 控制。
+
+> `GameContainer` 提供背景层（`bg-image` / `bg-class` prop）和宽高比约束层（`.game-inner`，默认 3:4，可通过 `--gc-aspect-ratio` 覆盖）。
+>
+> 站点外部容器（`GameView.vue` 的 `.game-shell`）不做宽度约束。
+
+#### 自定义宽高比与间距
+
+```css
+:deep(.game-container) {
+  --gc-padding-top: 0;
+  --gc-padding-right: 0;
+  --gc-padding-bottom: 0;
+  --gc-padding-left: 0;
+  --gc-aspect-ratio: none;  /* 移除宽高比约束 */
+}
+```
+
+可用变量：
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `--gc-padding-top` | `max(12px, env(safe-area-inset-top))` | 顶部间距 |
+| `--gc-padding-right` | `clamp(14px, 3.5vw, 28px)` | 右侧间距 |
+| `--gc-padding-bottom` | `max(12px, env(safe-area-inset-bottom))` | 底部间距 |
+| `--gc-padding-left` | `clamp(14px, 3.5vw, 28px)` | 左侧间距 |
+| `--gc-aspect-ratio` | `3 / 4` | 内容区宽高比（设为 `none` 移除约束） |
 
 ### 3.1 容器查询（Container Queries）自适应
 
@@ -226,38 +220,17 @@ el.addEventListener('pointerup', onPointerUp)
 
 ### 3.3 安全区域（Safe Area）
 
-在刘海屏/圆角屏/有状态栏的手机上，**顶部功能元素**（header/HUD/status-bar/toolbar）必须预留安全区域，避免内容被状态栏遮挡。
-
-**规则：将 `padding-top` 单独拆分，使用 `max(原padding-top值, env(safe-area-inset-top))`。**
+安全区域保护已由 `GameContainer.vue` 统一处理，**游戏内部无需关心** safe area：
 
 ```css
-/* 正确：拆分 padding-top，语义清晰 */
-.play-header {
-  padding: 0 0 18px;
-  padding-top: max(4px, env(safe-area-inset-top));
-}
-
-.hud {
-  padding: 0 16px 12px;
-  padding-top: max(12px, env(safe-area-inset-top));
-}
-
-/* 如果原顶部 padding 使用了 clamp，保留 clamp 逻辑 */
-.status-bar {
-  padding: 0 clamp(10px, 2.5cqw, 12px) 4px;
-  padding-top: max(clamp(12px, 4cqw, 20px), env(safe-area-inset-top));
+/* GameContainer.vue */
+.game-container {
+  padding-top: max(12px, env(safe-area-inset-top));    /* 顶部安全区域 */
+  padding-bottom: max(12px, env(safe-area-inset-bottom)); /* 底部安全区域 */
 }
 ```
 
-> **为什么加在顶部功能元素而不是外层容器？**
-> 外层容器（`.play-page`）通常包含 `aspect-ratio` 约束的内层内容容器。在外层加 `padding-top` 会破坏宽高比居中的布局计算。将 safe area 加在顶部功能元素上是最小侵入性的方案，不影响布局。
-
-> 底部安全区域（如首页底部列表）同理，使用 `padding-bottom: max(原值, env(safe-area-inset-bottom))`。
-
-**已实现的页面参考：**
-- 星际捕手 play 页：`src/games/star-catcher/index.vue`（`.hud`，第 571 行）
-- 星际捕手首页：`src/games/star-catcher/Home.vue`（`.menu-screen`/`.archive-screen`，第 353 行）
-- 记忆翻牌首页：`src/games/memory-match/Home.vue`（`.top-tools`，第 394 行）
+> 如果游戏内部某个功能元素（如固定在底部的按钮）需要在 safe area 之上额外增加间距，只在该元素上追加所需 padding，不要重复处理 safe area。
 
 ### 4. 游戏首页设计
 
