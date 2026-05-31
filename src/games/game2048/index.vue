@@ -17,6 +17,8 @@ import {
 import { settingsStore } from './settingsStore'
 import { getTheme } from './themes'
 import IconHammer from './components/IconHammer.vue'
+import IconUndo from './components/IconUndo.vue'
+import IconWand from './components/IconWand.vue'
 import ResultDialog from './components/ResultDialog.vue'
 import ThemeDialog from './components/ThemeDialog.vue'
 import PowerUpDialog from './components/PowerUpDialog.vue'
@@ -44,6 +46,9 @@ interface ActiveCell {
 
 const GAME_ID = '2048'
 const WAND_REPLACEMENT_VALUES = [2, 4, 8, 16, 32]
+const HAMMER_ANIMATION_MS = 680
+const NEW_CELL_HIGHLIGHT_MS = 300
+const SWIPE_THRESHOLD_PX = 30
 let cellIdCounter = 0
 let hammerImpactTimer: number | null = null
 let newCellTimer: number | null = null
@@ -193,7 +198,7 @@ const trackNewCells = (prevIds: Set<number>) => {
   newCellTimer = window.setTimeout(() => {
     newCellIds.value = new Set()
     newCellTimer = null
-  }, 300)
+  }, NEW_CELL_HIGHLIGHT_MS)
 }
 
 const cloneStoredGrid = (source: GameCell[][]): StoredCell[][] =>
@@ -211,15 +216,14 @@ const restoreFromStorage = async () => {
   await settingsStore.load()
   settingsLoaded.value = true
 
-  const state = await gameStorage.loadGameState(GAME_ID)
+  const state = await gameStorage.loadGameState<GameState>(GAME_ID)
   if (state) {
-    const savedState = state as GameState
-    grid.value = restoreStoredGrid(savedState.grid)
-    score.value = savedState.score
-    bestScore.value = savedState.bestScore
-    gameStatus.value = savedState.gameStatus
-    powerUps.value = savedState.powerUps ?? { undo: 3, wand: 3, hammer: 3 }
-    undoSnapshot.value = savedState.undoSnapshot ?? null
+    grid.value = restoreStoredGrid(state.grid)
+    score.value = state.score
+    bestScore.value = state.bestScore
+    gameStatus.value = state.gameStatus
+    powerUps.value = state.powerUps ?? { undo: 3, wand: 3, hammer: 3 }
+    undoSnapshot.value = null
   } else {
     await initGrid()
   }
@@ -276,7 +280,6 @@ const initGrid = async () => {
   helpOpen.value = false
   addRandomCell()
   addRandomCell()
-  updateScore(0)
   gameStatus.value = 'playing'
   await saveToStorage()
 }
@@ -302,7 +305,7 @@ const move = (dir: MoveDirection) => {
     checkLose()
   }
 
-  void saveToStorage()
+  saveToStorage().catch(() => {})
   trackNewCells(prevIds)
   return true
 }
@@ -322,7 +325,7 @@ const restoreUndo = () => {
   wandMode.value = false
   selectedWandTarget.value = null
   soundManager.playUndoPowerUp()
-  void saveToStorage()
+  saveToStorage().catch(() => {})
 }
 
 const useWand = () => {
@@ -374,7 +377,7 @@ const replaceSelectedCellWithWand = (value: number) => {
   } else {
     checkLose()
   }
-  void saveToStorage()
+  saveToStorage().catch(() => {})
 }
 
 const useHammer = () => {
@@ -402,9 +405,9 @@ const hitCellWithHammer = (target: HammerTarget) => {
     powerUps.value = { ...powerUps.value, hammer: powerUps.value.hammer - 1 }
     hammerMode.value = false
     hammerImpactTarget.value = null
-    void saveToStorage()
+    saveToStorage().catch(() => {})
     hammerImpactTimer = null
-  }, 680)
+  }, HAMMER_ANIMATION_MS)
 }
 
 const startPowerUp = (type: PowerUpType) => {
@@ -484,23 +487,24 @@ const handleKey = (e: KeyboardEvent) => {
 let startX = 0
 let startY = 0
 
-const onTouchStart = (e: TouchEvent) => {
-  startX = e.touches[0].clientX
-  startY = e.touches[0].clientY
+const onPointerDown = (e: PointerEvent) => {
+  startX = e.clientX
+  startY = e.clientY
+  ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
 }
 
-const onTouchEnd = (e: TouchEvent) => {
-  const dx = e.changedTouches[0].clientX - startX
-  const dy = e.changedTouches[0].clientY - startY
+const onPointerUp = (e: PointerEvent) => {
+  const dx = e.clientX - startX
+  const dy = e.clientY - startY
 
-  if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return
+  if (Math.abs(dx) < SWIPE_THRESHOLD_PX && Math.abs(dy) < SWIPE_THRESHOLD_PX) return
 
   move(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up')
 }
 
 watch(gameStatus, (newStatus) => {
   if (newStatus !== 'playing') {
-    void saveToStorage()
+    saveToStorage().catch(() => {})
     if (newStatus === 'won') soundManager.playWin()
     else if (newStatus === 'lost') soundManager.playLose()
   }
@@ -510,7 +514,12 @@ onMounted(async () => {
   cellIdCounter = 0
   await restoreFromStorage()
   await soundManager.init()
-  registerCleanup(GAME_ID, () => soundManager.destroy())
+  registerCleanup(GAME_ID, () => {
+    soundManager.destroy()
+    window.removeEventListener('keydown', handleKey)
+    clearHammerImpactTimer()
+    clearNewCellTimer()
+  })
   window.addEventListener('keydown', handleKey)
 })
 
@@ -528,8 +537,8 @@ onUnmounted(() => {
     <div
       class="game-root"
       :class="{ 'target-mode': activeTargetPowerUp }"
-      @touchstart="onTouchStart"
-      @touchend="onTouchEnd"
+      @pointerdown="onPointerDown"
+      @pointerup="onPointerUp"
     >
       <div class="game-content-shell">
         <header class="play-header">
@@ -576,36 +585,8 @@ onUnmounted(() => {
               :aria-label="`${item.ariaLabel}，剩余 ${powerUps[item.type]} 次`"
               @click="openPowerUpDialog(item.type)"
             >
-              <svg
-                v-if="item.icon === 'undo'"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.6"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M9 14 4 9l5-5" />
-                <path d="M4 9h10a6 6 0 1 1-4.2 10.3" />
-              </svg>
-              <svg
-                v-else-if="item.icon === 'wand'"
-                viewBox="0 0 48 48"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <g>
-                  <path
-                    d="M12.5 6c-1.112 4.017-2.543 5.39-6.5 6.5c3.957 1.11 5.388 2.483 6.5 6.5c1.112-4.017 2.543-5.39 6.5-6.5c-3.957-1.11-5.388-2.483-6.5-6.5m0 17c-1.112 4.017-2.543 5.39-6.5 6.5c3.957 1.11 5.388 2.483 6.5 6.5c1.112-4.017 2.543-5.39 6.5-6.5c-3.957-1.11-5.388-2.483-6.5-6.5M23 12.5c3.957-1.11 5.388-2.483 6.5-6.5c1.112 4.017 2.543 5.39 6.5 6.5c-3.957 1.11-5.388 2.483-6.5 6.5c-1.112-4.017-2.543-5.39-6.5-6.5"
-                  />
-                  <path
-                    fill-rule="evenodd"
-                    d="m35.8 41.456l-.23-.23l-.014-.013l-18.142-18.142a2 2 0 0 1 0-2.828l2.829-2.829a2 2 0 0 1 2.828 0L41.456 35.8a2 2 0 0 1 0 2.828l-2.828 2.829a2 2 0 0 1-2.829 0M22.615 25.444l-3.787-3.787l2.828-2.829l3.788 3.788z"
-                    clip-rule="evenodd"
-                  />
-                </g>
-              </svg>
+              <IconUndo v-if="item.icon === 'undo'" />
+              <IconWand v-else-if="item.icon === 'wand'" />
               <IconHammer v-else aria-hidden="true" />
               <span class="power-count">{{ powerUps[item.type] }}</span>
             </button>
@@ -639,7 +620,7 @@ onUnmounted(() => {
                   class="wand-replacement-btn"
                   :class="[getDefaultCellTheme(value).bg, getDefaultCellTheme(value).text]"
                   :disabled="value === selectedWandValue"
-                  @click="replaceSelectedCellWithWand(value)"
+                  @pointerdown="replaceSelectedCellWithWand(value)"
                 >
                   <span>{{ value }}</span>
                 </button>
@@ -657,7 +638,9 @@ onUnmounted(() => {
                   class="cell"
                   :class="cellClasses(cell)"
                   :style="cellPosStyle(cell)"
-                  @click="activeTargetPowerUp && handleCellClick({ row: cell.row, col: cell.col })"
+                  @pointerdown="
+                    activeTargetPowerUp && handleCellClick({ row: cell.row, col: cell.col })
+                  "
                 >
                   <img
                     v-if="theme.useIcons && cell.value && getIconSrc(cell.value)"

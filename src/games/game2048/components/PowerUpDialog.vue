@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import IconHammer from './IconHammer.vue'
+import IconUndo from './IconUndo.vue'
+import IconWand from './IconWand.vue'
 import type { PowerUpType } from '../types'
 
 defineProps<{
@@ -32,30 +34,8 @@ const emit = defineEmits<{
         {{ description }}
       </h2>
       <div class="power-dialog-icon" :class="type" aria-hidden="true">
-        <svg
-          v-if="type === 'undo'"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2.6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M9 14 4 9l5-5" />
-          <path d="M4 9h10a6 6 0 1 1-4.2 10.3" />
-        </svg>
-        <svg v-else-if="type === 'wand'" viewBox="0 0 48 48" fill="currentColor">
-          <g>
-            <path
-              d="M12.5 6c-1.112 4.017-2.543 5.39-6.5 6.5c3.957 1.11 5.388 2.483 6.5 6.5c1.112-4.017 2.543-5.39 6.5-6.5c-3.957-1.11-5.388-2.483-6.5-6.5m0 17c-1.112 4.017-2.543 5.39-6.5 6.5c3.957 1.11 5.388 2.483 6.5 6.5c1.112-4.017 2.543-5.39 6.5-6.5c-3.957-1.11-5.388-2.483-6.5-6.5M23 12.5c3.957-1.11 5.388-2.483 6.5-6.5c1.112 4.017 2.543 5.39 6.5 6.5c-3.957 1.11-5.388 2.483-6.5 6.5c-1.112-4.017-2.543-5.39-6.5-6.5"
-            />
-            <path
-              fill-rule="evenodd"
-              d="m35.8 41.456l-.23-.23l-.014-.013l-18.142-18.142a2 2 0 0 1 0-2.828l2.829-2.829a2 2 0 0 1 2.828 0L41.456 35.8a2 2 0 0 1 0 2.828l-2.828 2.829a2 2 0 0 1-2.829 0M22.615 25.444l-3.787-3.787l2.828-2.829l3.788 3.788z"
-              clip-rule="evenodd"
-            />
-          </g>
-        </svg>
+        <IconUndo v-if="type === 'undo'" />
+        <IconWand v-else-if="type === 'wand'" />
         <IconHammer v-else />
       </div>
       <p id="power-dialog-desc" class="power-dialog-count">剩余 {{ count }} 次</p>

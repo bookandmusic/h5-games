@@ -19,10 +19,9 @@ export const settingsStore = {
   },
   async load() {
     if (loaded) return
-    const saved = await gameStorage.loadGameState(SETTINGS_KEY)
+    const saved = await gameStorage.loadGameState<Settings>(SETTINGS_KEY)
     if (saved) {
-      const s = saved as Settings
-      settings.theme = s.theme || defaultSettings.theme
+      settings.theme = saved.theme || defaultSettings.theme
     }
     loaded = true
   },
@@ -33,6 +32,6 @@ export const settingsStore = {
 
   setTheme(t: Theme) {
     settings.theme = t
-    this.save()
+    this.save().catch(() => {})
   },
 }

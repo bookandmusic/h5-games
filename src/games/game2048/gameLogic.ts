@@ -24,8 +24,7 @@ export function getEmptyCells(grid: GameCell[][]): Array<{ row: number; col: num
 
 export function getNewCellValue(randomValue = Math.random()): number {
   if (randomValue < SPAWN_CONFIG.two) return 2
-  if (randomValue < SPAWN_CONFIG.two + SPAWN_CONFIG.four) return 4
-  return 8
+  return 4
 }
 
 export function spawnRandomCell(

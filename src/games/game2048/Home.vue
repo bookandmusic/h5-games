@@ -233,7 +233,6 @@ const nav = useGameNavigation(GAME_ID)
 @container game (max-width: 400px) {
   .home-inner {
     gap: 48px;
-    padding: 0;
   }
 
   .logo-lockup {
@@ -259,7 +258,6 @@ const nav = useGameNavigation(GAME_ID)
 @container game (min-width: 740px) {
   .home-inner {
     gap: 96px;
-    padding: 0;
   }
 
   .logo-lockup {
@@ -314,7 +312,6 @@ const nav = useGameNavigation(GAME_ID)
 @container game (min-width: 990px) {
   .home-inner {
     gap: 128px;
-    padding: 0;
   }
 
   .logo-lockup {
@@ -369,7 +366,6 @@ const nav = useGameNavigation(GAME_ID)
 @container game (min-width: 1410px) {
   .home-inner {
     gap: 148px;
-    padding: 0;
   }
 
   .logo-lockup {

@@ -492,10 +492,6 @@
 }
 
 @container game (max-width: 520px) {
-  .game-content-shell {
-    padding: 0;
-  }
-
   .play-header {
     gap: 10px;
     padding-bottom: 16px;
@@ -593,10 +589,6 @@
 }
 
 @container game (min-width: 580px) {
-  .game-content-shell {
-    padding: 0;
-  }
-
   .play-header {
     gap: 22px;
     padding-bottom: 22px;
@@ -704,10 +696,6 @@
 }
 
 @container game (min-width: 770px) {
-  .game-content-shell {
-    padding: 0;
-  }
-
   .play-header {
     gap: 30px;
     padding-bottom: 28px;
@@ -815,10 +803,6 @@
 }
 
 @container game (min-width: 1080px) {
-  .game-content-shell {
-    padding: 0;
-  }
-
   .play-header {
     gap: 34px;
     padding-bottom: 32px;

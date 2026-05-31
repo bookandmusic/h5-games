@@ -1,4 +1,11 @@
-import { getCtx, retainCtx, setMasterVolume, destroyCtx, osc } from '../../utils/soundUtils'
+import {
+  getCtx,
+  retainCtx,
+  setMasterVolume,
+  destroyCtx,
+  osc,
+  getMaster,
+} from '../../utils/soundUtils'
 
 let sfxVolume = 0.5
 let winBuffer: AudioBuffer | null = null
@@ -21,7 +28,7 @@ function playBuffer(buffer: AudioBuffer, volume: number) {
   const g = a.createGain()
   g.gain.value = volume * sfxVolume
   source.buffer = buffer
-  source.connect(g).connect(a.destination)
+  source.connect(g).connect(getMaster())
   source.start()
 }
 

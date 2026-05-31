@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { GameStatus } from '../types'
 
 const props = defineProps<{
@@ -16,10 +17,14 @@ const themeLabel: Record<string, string> = {
   default: '经典 2048',
   energy: '机械纪元',
   deity: '神祇进阶',
+  undead: '亡灵天灾',
 }
 
-const resultTitle = props.gameStatus === 'won' ? '恭喜获胜' : '本局结束'
-const resultDescription = `${themeLabel[props.themeName] || '经典 2048'}主题 · 得分 ${props.score} · 最高 ${props.bestScore}`
+const resultTitle = computed(() => (props.gameStatus === 'won' ? '恭喜获胜' : '本局结束'))
+const resultDescription = computed(
+  () =>
+    `${themeLabel[props.themeName] || '经典 2048'}主题 · 得分 ${props.score} · 最高 ${props.bestScore}`
+)
 </script>
 
 <template>
