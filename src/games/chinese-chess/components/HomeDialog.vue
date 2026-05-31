@@ -10,6 +10,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   start: [config: { difficulty: Difficulty; side: PieceColor }]
+  close: []
 }>()
 
 const difficultyOptions: Array<{ value: Difficulty; label: string }> = [
@@ -32,7 +33,7 @@ const handleStart = () => {
     :title="props.mode === 'ai' ? '单人对局' : '双人对局'"
     width="min(100%, 360px)"
     body-class="no-gap"
-    @close="handleStart"
+    @close="$emit('close')"
   >
     <template v-if="props.mode === 'ai'">
       <div class="section-title">AI 难度</div>

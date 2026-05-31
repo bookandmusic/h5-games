@@ -55,6 +55,10 @@ function handleConfirmExit() {
   nav.goToHome()
 }
 
+function handleCloseSetup() {
+  showStartSetup.value = false
+}
+
 function getPieceAlt(piece: Piece | null) {
   return piece ? getPieceLabel(piece) : ''
 }
@@ -127,7 +131,7 @@ function getPieceAlt(piece: Piece | null) {
                     left: `calc(${(dc / 8) * 100}% - var(--ps) / 2)`,
                     top: `calc(${(dr / 9) * 100}% - var(--ps) / 2)`,
                   }"
-                  @click="handleSelect(getActualPosition(dr, dc))"
+                  @pointerdown="handleSelect(getActualPosition(dr, dc))"
                 >
                   <div v-if="board[ar][ac]" class="piece" :class="board[ar][ac]?.color">
                     {{ getPieceLabel(board[ar][ac]) }}
@@ -165,6 +169,7 @@ function getPieceAlt(piece: Piece | null) {
       v-if="showStartSetup && pendingSetupMode"
       :mode="pendingSetupMode"
       @start="handleStartConfig"
+      @close="handleCloseSetup"
     />
   </GameContainer>
 </template>

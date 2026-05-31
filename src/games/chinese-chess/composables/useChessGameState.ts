@@ -1,4 +1,4 @@
-import { computed, ref, toRaw } from 'vue'
+import { ref, toRaw } from 'vue'
 
 import {
   BOARD_COLS,
@@ -7,7 +7,6 @@ import {
   createInitialBoard,
   generateLegalMoves,
   getWinner,
-  isInCheck,
 } from '../engine'
 import type { Board, Move, PieceColor, Position } from '../types'
 
@@ -20,8 +19,6 @@ export function useChessGameState() {
   const moveCount = ref(0)
   const moveHistory = ref<Array<{ board: Board; turn: PieceColor; moveCount: number }>>([])
   const hintMove = ref<Move | null>(null)
-
-  const inCheck = computed(() => winner.value === null && isInCheck(board.value, currentTurn.value))
 
   const clearSelection = () => {
     selected.value = null
@@ -43,15 +40,14 @@ export function useChessGameState() {
     moveCount.value += 1
     clearSelection()
     hintMove.value = null
-    syncWinner()
   }
 
   const syncWinner = () => {
     winner.value = getWinner(board.value, currentTurn.value)
   }
 
-  const handleSelect = (pos: Position, isHumanTurn: boolean) => {
-    if (winner.value !== null || !isHumanTurn) return
+  const handleSelect = (pos: Position, isHumanTurn: boolean): Move | null => {
+    if (winner.value !== null || !isHumanTurn) return null
 
     const piece = board.value[pos.row][pos.col]
     const existingMove = selected.value
@@ -103,7 +99,6 @@ export function useChessGameState() {
     moveCount,
     moveHistory,
     hintMove,
-    inCheck,
     clearSelection,
     saveHistory,
     commitMove,

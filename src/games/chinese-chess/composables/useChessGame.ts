@@ -1,10 +1,12 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
+import { retainCtx, destroyCtx } from '../../../utils/soundUtils'
+import { useGameRouteLifecycle } from '../../../composables/useGameRouteLifecycle'
 import { BOARD_COLS, BOARD_ROWS, generateLegalMoves, isInCheck } from '../engine'
 import { sfxManager } from '../audio/sfxManager'
 import { settingsStore } from '../audio/settingsStore'
-import { getRankTitle } from '../constants'
+import { GAME_ID, getRankTitle } from '../constants'
 import type { Difficulty, GameMode, Move, Piece, PieceColor, Position } from '../types'
 
 import { useChessGameState } from './useChessGameState'
@@ -18,6 +20,7 @@ export function useChessGame(
   boardFrameRef?: { value: HTMLElement | null },
   baseUrl?: string
 ) {
+  const { registerCleanup } = useGameRouteLifecycle()
   const state = useChessGameState()
   const ai = useChessAI(state.board, state.currentTurn, state.winner)
   const persistence = useChessPersistence(gameId, route)
@@ -210,7 +213,6 @@ export function useChessGame(
     ai.clearAiTimer()
     ai.thinking.value = false
     await persistence.clearGameState(ai.activeMode.value)
-    state.resetBoard()
     items.pendingSetupMode.value = ai.activeMode.value
     items.showStartSetup.value = true
   }
@@ -230,6 +232,7 @@ export function useChessGame(
 
   const handleUndo = async () => {
     await items.handleUndo()
+    sfxManager.play('back')
     await persistence.persistProfile()
     await saveCurrentState()
   }
@@ -252,6 +255,7 @@ export function useChessGame(
   const handleStartConfig = async (config: { difficulty: Difficulty; side: PieceColor }) => {
     items.showStartSetup.value = false
     const nextMode = items.pendingSetupMode.value ?? 'ai'
+    state.resetBoard()
     await startGame({
       mode: nextMode,
       difficulty: nextMode === 'ai' ? config.difficulty : 'medium',
@@ -305,14 +309,16 @@ export function useChessGame(
   })
 
   onMounted(async () => {
+    retainCtx()
     await restoreOrStart()
   })
 
-  onBeforeUnmount(async () => {
+  registerCleanup(GAME_ID, async () => {
     ai.clearAiTimer()
     if (state.moveCount.value > 0) await saveCurrentState()
     await persistence.persistProfile()
     sfxManager.destroy()
+    destroyCtx()
   })
 
   return {

@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import type { RouteLocationNormalizedLoaded } from 'vue-router'
 
-import { gameStorage } from '../../../stores/gameStorage'
+import { useGameSaveState } from '../../../composables/useGameSaveState'
 import {
   type ChineseChessProfile,
   createDefaultProfile,
@@ -17,7 +17,7 @@ export function useChessPersistence(gameId: string, route: RouteLocationNormaliz
   const profile = ref<ChineseChessProfile>(createDefaultProfile())
   const loaded = ref(false)
 
-  const getStorageKey = (mode: GameMode) => `${gameId}-save-${mode}`
+  const saver = useGameSaveState(gameId)
 
   const persistProfile = async () => {
     await saveProfileToStore(profile.value)
@@ -35,14 +35,14 @@ export function useChessPersistence(gameId: string, route: RouteLocationNormaliz
     }
   ) => {
     if (state.winner !== null) {
-      await gameStorage.clearGameState(getStorageKey(mode))
+      await saver.clear(mode)
       return
     }
-    await gameStorage.saveGameState(getStorageKey(mode), state)
+    await saver.save(mode, state)
   }
 
   const clearGameState = async (mode: GameMode) => {
-    await gameStorage.clearGameState(getStorageKey(mode))
+    await saver.clear(mode)
   }
 
   const loadGameState = async (mode: GameMode) => {
@@ -55,7 +55,7 @@ export function useChessPersistence(gameId: string, route: RouteLocationNormaliz
       humanSide: PieceColor
       moveCount: number
     }
-    return await gameStorage.loadGameState<SaveData>(getStorageKey(mode))
+    return await saver.load<SaveData>(mode)
   }
 
   const loadProfileData = async () => {
@@ -80,6 +80,7 @@ export function useChessPersistence(gameId: string, route: RouteLocationNormaliz
     }
 
     profile.value.totalGames += 1
+    profile.value.totalWins += 1
     updateTask(profile.value.daily.tasks.playGame, 1)
     profile.value.wins += 1
     profile.value.currentStreak += 1

@@ -1,3 +1,4 @@
+import { getCtx, getMaster } from '../../../utils/soundUtils'
 import { settingsStore } from './settingsStore'
 
 export type SfxType = 'move' | 'eat' | 'check' | 'win' | 'select' | 'back'
@@ -41,27 +42,19 @@ const sfxEntries: Record<SfxType, SfxEntry> = {
   },
 }
 
-let ctx: AudioContext | null = null
 let initialized = false
 let pendingPlays: Array<() => void> = []
 
-function getCtx(): AudioContext {
-  if (!ctx) {
-    ctx = new AudioContext()
-  }
-  return ctx
-}
-
 function resumeCtx() {
-  if (ctx?.state === 'suspended') {
+  const ctx = getCtx()
+  if (ctx.state === 'suspended') {
     ctx.resume().then(flushPending)
-  } else if (ctx?.state === 'running') {
+  } else if (ctx.state === 'running') {
     flushPending()
   }
 }
 
 function flushPending() {
-  if (!ctx) return
   const list = pendingPlays
   pendingPlays = []
   list.forEach((fn) => fn())
@@ -176,7 +169,7 @@ function doPlay(type: SfxType) {
   const gain = audioCtx.createGain()
   gain.gain.value = settingsStore.volume
   source.buffer = buffer
-  source.connect(gain).connect(audioCtx.destination)
+  source.connect(gain).connect(getMaster())
   source.start(0)
 }
 
@@ -214,10 +207,6 @@ export const sfxManager = {
 
   destroy() {
     pendingPlays = []
-    if (ctx) {
-      ctx.close().catch(() => {})
-      ctx = null
-    }
     initialized = false
     for (const entry of Object.values(sfxEntries)) {
       entry.buffer = null

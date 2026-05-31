@@ -80,7 +80,8 @@ export const applyMove = (board: Board, move: Move): Board => {
   return nextBoard
 }
 
-export const getPieceLabel = (piece: Piece) => {
+export const getPieceLabel = (piece: Piece | null): string => {
+  if (!piece) return ''
   const redNames: Record<PieceType, string> = {
     general: '帅',
     advisor: '仕',

@@ -1,4 +1,3 @@
-import { getRankTitle } from '../constants'
 import { gameStorage } from '../../../stores/gameStorage'
 
 export type ChineseChessInventory = {
@@ -28,6 +27,7 @@ export type ChineseChessProfile = {
   inventory: ChineseChessInventory
   level: number
   totalGames: number
+  totalWins: number
   wins: number
   highestLevel: number
   currentStreak: number
@@ -35,8 +35,6 @@ export type ChineseChessProfile = {
 }
 
 export const SHOP_PRICES = { undo: 15, hint: 25 } as const
-
-export { getRankTitle }
 
 export const getLevelUpWins = (level: number): number => level * 2
 
@@ -53,6 +51,7 @@ export const createDefaultProfile = (): ChineseChessProfile => ({
   inventory: { undo: 0, hint: 0 },
   level: 1,
   totalGames: 0,
+  totalWins: 0,
   wins: 0,
   highestLevel: 1,
   currentStreak: 0,

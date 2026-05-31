@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 
 import { useGameNavigation } from '../../composables/useGameNavigation'
 import { settingsStore } from './audio/settingsStore'
 import {
   type ChineseChessProfile,
   createDefaultProfile,
-  getRankTitle,
   loadProfile,
   resetDailyIfNewDay,
   saveProfile,
   SHOP_PRICES,
 } from './store/save'
+import { getRankTitle } from './constants'
 import DialogBtn from './components/DialogBtn.vue'
 import type { GameMode } from './types'
 import GameContainer from '../../components/GameContainer.vue'
@@ -22,7 +21,6 @@ function imgUrl(name: string): string {
 }
 
 const GAME_ID = 'chinese-chess'
-const router = useRouter()
 const nav = useGameNavigation(GAME_ID)
 
 const profile = ref<ChineseChessProfile>(createDefaultProfile())
@@ -58,13 +56,13 @@ const buyItem = async (item: 'undo' | 'hint') => {
 }
 
 const enterMode = (mode: GameMode) => {
-  router.push(`/game/${GAME_ID}/play?mode=${mode}`)
+  nav.goToPlay({ mode })
 }
 
 const levelTitle = computed(() => `${profile.value.level} · ${getRankTitle(profile.value.level)}`)
 const winRate = computed(() => {
   if (profile.value.totalGames === 0) return '--'
-  return ((profile.value.wins / profile.value.totalGames) * 100).toFixed(1) + '%'
+  return ((profile.value.totalWins / profile.value.totalGames) * 100).toFixed(1) + '%'
 })
 
 const soundOn = computed(() => settingsStore.sfxEnabled || settingsStore.musicEnabled)
