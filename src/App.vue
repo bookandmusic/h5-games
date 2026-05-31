@@ -4,9 +4,7 @@ import { useBackButton } from './composables/useBackButton'
 
 const { setup } = useBackButton()
 
-onMounted(() => {
-  setup()
-})
+onMounted(setup)
 </script>
 
 <template>

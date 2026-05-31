@@ -3,10 +3,8 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 
 import BgDecoration from '../components/BgDecoration.vue'
 import GameCard from '../components/GameCard.vue'
-import { useBackButton } from '../composables/useBackButton'
+import { pushEntry } from '../composables/useBackButton'
 import { useGamesStore } from '../stores/games'
-
-const { pushEntry } = useBackButton()
 
 onMounted(() => {
   pushEntry({ page: 'home' })

@@ -1,11 +1,11 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import gamesData from '../data/games.json'
 import type { Game } from '../types/game'
+import { getGameCatalog } from '../router/manifests'
 
 export const useGamesStore = defineStore('games', () => {
-  const games = ref<Game[]>(gamesData as Game[])
+  const games = ref<Game[]>(getGameCatalog())
   const searchQuery = ref('')
   const selectedCategory = ref<string | null>(null)
 
