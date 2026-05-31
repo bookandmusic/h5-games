@@ -46,3 +46,5 @@ docs/tmp/
 *.sw?
 *.keystore
 .venv
+.superpowers/*
+docs/superpowers/*
