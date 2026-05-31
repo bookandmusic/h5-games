@@ -1,0 +1,836 @@
+/* 记忆翻牌 v5 — 星图冒险设计系统 */
+/* 被各页面通过 import './game-theme.css' 引入 */
+
+:root {
+  --c-primary: #68b8ff;
+  --c-primary-dark: #4a9eff;
+  --c-secondary: #9b8ae6;
+  --c-surface: #0c1435;
+  --c-surface-light: #161e50;
+  --c-surface-lighter: #202a60;
+  --c-gold: #ffd700;
+  --c-gold-dim: rgba(255, 215, 0, 0.35);
+  --c-success: #66bb6a;
+  --c-warning: #ff6b4a;
+  --c-text: #f0f4ff;
+  --c-text-dim: rgba(180, 210, 255, 0.72);
+  --c-text-muted: rgba(180, 210, 255, 0.4);
+  --c-overlay: rgba(5, 8, 25, 0.75);
+  --c-shadow: rgba(0, 0, 0, 0.5);
+  --radius-btn: 14px;
+  --radius-card: 12px;
+  --radius-island: 20px;
+  --star-hud-bg: linear-gradient(180deg, rgba(13, 24, 58, 0.82), rgba(6, 12, 34, 0.82));
+  --star-hud-border: rgba(104, 184, 255, 0.18);
+  --star-glow-blue: rgba(104, 184, 255, 0.22);
+  --star-glow-gold: rgba(255, 215, 106, 0.28);
+
+  /* 新增：科技发光系统 */
+  --glow-blue-soft: 0 0 20px rgba(104, 184, 255, 0.15), 0 0 40px rgba(104, 184, 255, 0.08);
+  --glow-blue-medium: 0 0 24px rgba(104, 184, 255, 0.25), 0 0 60px rgba(104, 184, 255, 0.12);
+  --glow-blue-strong: 0 0 30px rgba(104, 184, 255, 0.35), 0 0 80px rgba(104, 184, 255, 0.18);
+  --glow-border: 0 0 12px rgba(104, 184, 255, 0.2);
+}
+
+/* === 星图统一手游 UI === */
+.star-page,
+.star-play {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  color: var(--c-text);
+  display: flex;
+  flex-direction: column;
+}
+
+.star-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.star-top-hud {
+  --th: 10px;
+  position: relative;
+  isolation: isolate;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  padding: clamp(6px, 1.2cqh, 10px) clamp(8px, 2cqw, 14px);
+  border: 0;
+  border-radius: 0;
+  background: var(--star-hud-border);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(180, 220, 255, 0.1);
+  backdrop-filter: blur(10px);
+  clip-path: polygon(
+    var(--th) 0%,
+    100% 0%,
+    100% calc(100% - var(--th)),
+    calc(100% - var(--th)) 100%,
+    0% 100%,
+    0% var(--th)
+  );
+}
+
+.star-top-hud::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  z-index: 0;
+  clip-path: polygon(
+    calc(var(--th) - 1px) 0%,
+    100% 0%,
+    100% calc(100% - var(--th) + 1px),
+    calc(100% - var(--th) + 1px) 100%,
+    0% 100%,
+    0% calc(var(--th) - 1px)
+  );
+  background: var(--star-hud-bg);
+  pointer-events: none;
+}
+
+.star-top-hud::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  z-index: 0;
+  padding: 1px;
+  clip-path: polygon(
+    calc(var(--th) - 2px) 0%,
+    100% 0%,
+    100% calc(100% - var(--th) + 2px),
+    calc(100% - var(--th) + 2px) 100%,
+    0% 100%,
+    0% calc(var(--th) - 2px)
+  );
+  background: rgba(112, 171, 255, 0.15);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+.star-top-hud > * {
+  position: relative;
+  z-index: 1;
+}
+
+.star-resource-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1.2cqw, 10px);
+  min-width: 0;
+}
+
+.star-hit-icon {
+  min-width: 48px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  color: var(--c-primary);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease;
+}
+
+.star-hit-icon:active {
+  transform: scale(0.9);
+  filter: brightness(1.25) drop-shadow(0 0 10px rgba(104, 184, 255, 0.35));
+}
+
+.star-hit-icon img,
+.star-hit-icon svg {
+  width: clamp(32px, 7cqw, 42px);
+  height: clamp(32px, 7cqw, 42px);
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(104, 184, 255, 0.24));
+  pointer-events: none;
+}
+
+.star-hud-value {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-text);
+  font-weight: 900;
+  text-shadow:
+    0 0 10px rgba(104, 184, 255, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.38);
+  font-variant-numeric: tabular-nums;
+}
+
+.star-hud-meter {
+  position: relative;
+  isolation: isolate;
+  min-height: 42px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding-inline: clamp(6px, 1.6cqw, 12px);
+  border: 0;
+  border-radius: 0;
+  background: rgba(104, 184, 255, 0.1);
+  box-shadow: none;
+  clip-path: polygon(
+    6px 0%,
+    100% 0%,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    0% 100%,
+    0% 6px
+  );
+}
+
+.star-hud-meter::before {
+  content: '';
+  position: absolute;
+  inset: 1px;
+  z-index: 0;
+  clip-path: polygon(
+    5px 0%,
+    100% 0%,
+    100% calc(100% - 5px),
+    calc(100% - 5px) 100%,
+    0% 100%,
+    0% 5px
+  );
+  background: rgba(8, 16, 38, 0.55);
+  pointer-events: none;
+}
+
+.star-hud-meter::after {
+  content: '';
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(104, 184, 255, 0.72), transparent);
+  z-index: 1;
+}
+
+/* ── 面板 ── */
+.star-panel {
+  border: 1.5px solid rgba(104, 184, 255, 0.18);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(16, 27, 61, 0.96), rgba(7, 17, 38, 0.96));
+  box-shadow:
+    0 22px 58px rgba(0, 0, 0, 0.48),
+    0 0 28px rgba(104, 184, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ── 弹窗（真实切角边框）── */
+.star-modal {
+  --ch: 26px;
+  position: relative;
+  isolation: isolate;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: rgba(118, 172, 255, 0.72) !important;
+  box-shadow:
+    0 22px 58px rgba(0, 0, 0, 0.5),
+    0 0 32px rgba(104, 184, 255, 0.12) !important;
+  clip-path: polygon(
+    var(--ch) 0%,
+    100% 0%,
+    100% calc(100% - var(--ch)),
+    calc(100% - var(--ch)) 100%,
+    0% 100%,
+    0% var(--ch)
+  ) !important;
+}
+
+.star-modal::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  z-index: 0;
+  clip-path: polygon(
+    calc(var(--ch) - 2px) 0%,
+    100% 0%,
+    100% calc(100% - var(--ch) + 2px),
+    calc(100% - var(--ch) + 2px) 100%,
+    0% 100%,
+    0% calc(var(--ch) - 2px)
+  );
+  background: linear-gradient(180deg, rgba(10, 23, 56, 0.98), rgba(6, 14, 34, 0.98));
+  pointer-events: none;
+}
+
+.star-modal::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  z-index: 0;
+  padding: 1px;
+  clip-path: polygon(
+    calc(var(--ch) - 3px) 0%,
+    100% 0%,
+    100% calc(100% - var(--ch) + 3px),
+    calc(100% - var(--ch) + 3px) 100%,
+    0% 100%,
+    0% calc(var(--ch) - 3px)
+  );
+  background: rgba(145, 195, 255, 0.24);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+.star-modal > * {
+  position: relative;
+  z-index: 1;
+}
+
+.star-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: #eef6ff;
+  cursor: pointer;
+  z-index: 20;
+  filter: drop-shadow(0 0 9px rgba(108, 196, 255, 0.34));
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease;
+}
+.star-modal-close:active {
+  transform: scale(0.9);
+}
+.star-modal-close svg {
+  width: 24px;
+  height: 24px;
+}
+
+.star-rune-tab {
+  position: relative;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px clamp(8px, 2cqw, 14px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(180, 210, 255, 0.68);
+  font-size: clamp(11px, 2.2cqw, 13px);
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.42);
+  transition:
+    transform 0.12s ease,
+    color 0.12s ease,
+    filter 0.12s ease;
+}
+
+.star-rune-tab::after {
+  content: '';
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.star-rune-tab:active {
+  transform: scale(0.95);
+}
+
+.star-rune-tab.active {
+  color: var(--chip-color, var(--accent, var(--c-primary)));
+  filter: drop-shadow(
+    0 0 8px color-mix(in srgb, var(--chip-color, var(--c-primary)) 42%, transparent)
+  );
+}
+
+.star-rune-tab.active::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--chip-color, var(--accent, var(--c-primary))),
+    transparent
+  );
+}
+
+.star-card {
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid rgba(104, 184, 255, 0.12);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(20, 32, 70, 0.68), rgba(8, 14, 38, 0.56));
+  box-shadow:
+    0 5px 0 rgba(5, 10, 30, 0.62),
+    0 10px 22px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.star-card:active {
+  transform: scale(0.96) translateY(2px);
+}
+
+.star-primary-btn,
+.star-secondary-btn {
+  min-width: 48px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: var(--radius-btn);
+  font-family: inherit;
+  font-size: clamp(14px, 3.2cqw, 17px);
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.star-primary-btn {
+  border: 1px solid rgba(180, 220, 255, 0.26);
+  background: linear-gradient(180deg, #7fc7ff 0%, #5a8dff 58%, #3f65d6 100%);
+  color: #f7fbff;
+  box-shadow:
+    0 6px 0 #28489f,
+    0 10px 22px rgba(90, 141, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
+.star-secondary-btn {
+  border: 1px solid rgba(104, 184, 255, 0.22);
+  background: rgba(16, 27, 61, 0.72);
+  color: rgba(222, 236, 255, 0.86);
+  box-shadow:
+    0 4px 0 rgba(5, 8, 25, 0.45),
+    0 8px 18px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(180, 220, 255, 0.08);
+}
+
+.star-primary-btn:active,
+.star-secondary-btn:active {
+  transform: scale(0.94) translateY(2px);
+}
+
+.star-modal {
+  width: min(380px, 88vw);
+  max-height: min(620px, 84vh);
+  padding: clamp(18px, 4cqw, 28px);
+}
+
+/* === 3D 按钮通用 === */
+.btn-3d {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: var(--radius-btn);
+  font-weight: 700;
+  font-size: clamp(13px, 3.2cqw, 16px);
+  color: var(--c-text);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease;
+  position: relative;
+}
+
+.btn-3d::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn-3d:active {
+  transform: scale(0.94) translateY(2px);
+}
+
+.btn-3d-gold {
+  background: linear-gradient(180deg, #6a9eff 0%, #4a7dcc 60%, #3a5cb8 100%);
+  box-shadow:
+    0 6px 0 #2a3d94,
+    0 8px 20px rgba(60, 100, 200, 0.35);
+  color: #e8f0ff;
+}
+
+.btn-3d-gold:active {
+  box-shadow:
+    0 2px 0 #2a3d94,
+    0 4px 12px rgba(60, 100, 200, 0.25);
+}
+
+.btn-3d-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.3),
+    0 0 0 1.5px rgba(100, 180, 255, 0.4);
+  color: var(--c-text);
+}
+
+.btn-3d-ghost:active {
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.3),
+    0 0 0 1.5px rgba(100, 180, 255, 0.4);
+}
+
+/* === 切角弹窗条目与按钮 === */
+.star-tech-item,
+.star-primary-btn,
+.star-secondary-btn {
+  --tech-cut: 18px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 0 !important;
+  clip-path: polygon(
+    var(--tech-cut) 0%,
+    100% 0%,
+    calc(100% - var(--tech-cut)) 100%,
+    0% 100%,
+    0% var(--tech-cut)
+  ) !important;
+}
+
+.star-tech-item {
+  background: rgba(92, 139, 232, 0.38) !important;
+  box-shadow: inset 0 0 0 1px rgba(117, 173, 255, 0.08);
+}
+
+.star-primary-btn,
+.star-secondary-btn {
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28) !important;
+}
+
+.star-tech-item::before,
+.star-primary-btn::before,
+.star-secondary-btn::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  clip-path: polygon(
+    calc(var(--tech-cut) - 2px) 0%,
+    100% 0%,
+    calc(100% - var(--tech-cut) + 2px) 100%,
+    0% 100%,
+    0% calc(var(--tech-cut) - 2px)
+  );
+  background: linear-gradient(180deg, rgba(9, 19, 46, 0.94), rgba(8, 16, 38, 0.98));
+  pointer-events: none;
+}
+
+.star-tech-item::after,
+.star-primary-btn::after,
+.star-secondary-btn::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  padding: 1px;
+  clip-path: polygon(
+    calc(var(--tech-cut) - 3px) 0%,
+    100% 0%,
+    calc(100% - var(--tech-cut) + 3px) 100%,
+    0% 100%,
+    0% calc(var(--tech-cut) - 3px)
+  );
+  background: rgba(112, 171, 255, 0.22);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+  box-shadow: none !important;
+}
+
+.star-tech-item > *,
+.star-primary-btn > *,
+.star-secondary-btn > * {
+  position: relative;
+  z-index: 1;
+}
+
+.star-tech-item.active,
+.star-tech-item.claimable,
+.star-primary-btn {
+  background: rgba(226, 248, 255, 0.52) !important;
+  color: #0b2348 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.star-tech-item.active *,
+.star-tech-item.claimable * {
+  color: #0b2348 !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.star-tech-item.active::before,
+.star-tech-item.claimable::before,
+.star-primary-btn::before {
+  background: linear-gradient(
+    90deg,
+    rgba(151, 235, 255, 0.98),
+    rgba(100, 173, 255, 0.94) 54%,
+    rgba(63, 106, 210, 0.92)
+  );
+}
+
+.star-tech-item.active::after,
+.star-tech-item.claimable::after,
+.star-primary-btn::after {
+  background: rgba(240, 250, 255, 0.38);
+}
+
+.star-secondary-btn {
+  background: rgba(92, 139, 232, 0.34) !important;
+  color: #fff !important;
+  text-shadow: none;
+}
+
+.star-primary-btn:disabled,
+.star-primary-btn.disabled,
+.star-secondary-btn:disabled,
+.star-secondary-btn.disabled {
+  cursor: default;
+  opacity: 0.52;
+  filter: grayscale(0.25);
+}
+
+.star-primary-btn:disabled::before,
+.star-primary-btn.disabled::before {
+  background: linear-gradient(180deg, rgba(34, 48, 82, 0.94), rgba(15, 23, 48, 0.98));
+}
+
+.star-primary-btn:disabled,
+.star-primary-btn.disabled {
+  color: rgba(238, 246, 255, 0.46) !important;
+  text-shadow: none;
+}
+
+/* === 3D 星标 === */
+.star-3d {
+  display: inline-block;
+  font-size: clamp(14px, 3.5cqw, 20px);
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
+}
+
+.star-3d.filled {
+  background: linear-gradient(135deg, #ffd700, #ffa000);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 4px rgba(255, 165, 0, 0.4));
+}
+
+.star-3d.empty {
+  color: rgba(255, 255, 255, 0.12);
+}
+
+/* === 3D 岛屿卡片（地图用） === */
+.island-3d {
+  position: relative;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-island);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 0;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+  background: var(--accent, #ff8a65);
+  box-shadow:
+    0 10px 0 color-mix(in srgb, var(--accent, #ff8a65) 70%, #000),
+    0 14px 28px rgba(0, 0, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.25);
+  transform: perspective(600px) rotateX(2deg);
+}
+
+.island-3d:active {
+  transform: perspective(600px) rotateX(2deg) scale(0.96) translateY(4px);
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--accent, #ff8a65) 70%, #000),
+    0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.island-3d.locked {
+  opacity: 0.55;
+  filter: grayscale(0.6) brightness(0.7);
+  cursor: default;
+  pointer-events: none;
+}
+
+.island-banner {
+  width: 100%;
+  height: clamp(24px, 5cqh, 36px);
+  overflow: hidden;
+}
+
+.island-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.island-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: clamp(12px, 2.5cqh, 18px) clamp(14px, 3.5cqw, 22px);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08) 0%, rgba(0, 0, 0, 0.25) 100%);
+}
+
+.island-name {
+  font-size: clamp(16px, 4cqw, 22px);
+  font-weight: 800;
+  color: var(--c-text);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.island-stars {
+  display: flex;
+  gap: 3px;
+}
+
+/* === 3D lock overlay === */
+.island-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+  border-radius: inherit;
+  z-index: 2;
+}
+
+.island-lock-icon {
+  font-size: clamp(28px, 7cqw, 40px);
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.5));
+}
+
+.island-lock-text {
+  font-size: clamp(10px, 2.5cqw, 13px);
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* === 页面通用背景 === */
+.bg-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(5, 8, 25, 0.3) 0%,
+    rgba(5, 8, 25, 0.6) 60%,
+    rgba(5, 8, 25, 0.8) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* === 面板 === */
+.panel-wood {
+  background: linear-gradient(180deg, var(--c-surface-light), var(--c-surface));
+  border: 1.5px solid rgba(100, 180, 255, 0.2);
+  border-radius: var(--radius-card);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(180, 220, 255, 0.08);
+}
+
+/* === 通用过渡 === */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.scale-enter-active {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.scale-leave-active {
+  transition: all 0.15s ease;
+}
+.scale-enter-from {
+  opacity: 0;
+  transform: scale(0.85);
+}
+.scale-leave-to {
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-3d,
+  .btn-3d-gold,
+  .island-3d {
+    transition: none;
+  }
+  .island-3d:active {
+    transform: none;
+  }
+}
