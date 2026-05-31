@@ -13,6 +13,7 @@ const mockGame: Game = {
   description: '经典数字合成游戏',
   icon: '/assets/games/2048.png',
   route: '/game/2048',
+  routeName: 'game.2048.home',
 }
 
 const mockGameWithoutIcon: Game = {
@@ -22,12 +23,17 @@ const mockGameWithoutIcon: Game = {
   description: '测试无图标游戏',
   icon: '',
   route: '/game/test',
+  routeName: 'game.test.home',
 }
 
 describe('GameCard', () => {
   const router = createRouter({
     history: createWebHistory(),
-    routes: [{ path: '/', component: { template: '<div />' } }],
+    routes: [
+      { path: '/', component: { template: '<div />' } },
+      { path: '/game/2048', name: 'game.2048.home', component: { template: '<div />' } },
+      { path: '/game/test', name: 'game.test.home', component: { template: '<div />' } },
+    ],
   })
 
   beforeEach(() => {
@@ -58,7 +64,7 @@ describe('GameCard', () => {
       props: { game: mockGame },
     })
     await wrapper.find('.game-card').trigger('click')
-    expect(pushSpy).toHaveBeenCalledWith('/game/2048')
+    expect(pushSpy).toHaveBeenCalledWith({ name: 'game.2048.home' })
   })
 
   it('有图标时应显示图片', () => {

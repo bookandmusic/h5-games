@@ -55,7 +55,3 @@ body {
 ::-webkit-scrollbar {
   display: none;
 }
-
-.game-page-container {
-  box-sizing: border-box;
-}

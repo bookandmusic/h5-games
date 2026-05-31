@@ -13,7 +13,7 @@ const categoryColors: Record<string, string> = {
 const badgeColor = categoryColors[props.game.category] || '#a78bfa'
 
 const handleClick = () => {
-  router.push(props.game.route)
+  router.push({ name: props.game.routeName })
 }
 </script>
 
@@ -29,10 +29,12 @@ const handleClick = () => {
         <img v-if="game.icon" :src="game.icon" :alt="game.name" class="icon-img" />
         <span v-else class="icon-fallback">{{ game.name.slice(0, 1) }}</span>
       </div>
-      <div class="tray"></div>
+      <div class="crystal-pedestal"></div>
+    </div>
+    <div class="card-info">
+      <span class="card-name">{{ game.name }}</span>
       <span class="badge" :style="{ background: badgeColor }">{{ game.category }}</span>
     </div>
-    <div class="card-name">{{ game.name }}</div>
   </button>
 </template>
 
@@ -60,27 +62,24 @@ const handleClick = () => {
   width: 100%;
   aspect-ratio: 1 / 1;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .icon-area {
-  width: 60%;
-  height: 60%;
+  width: 58%;
+  height: 48%;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2;
   position: relative;
-  margin-top: 10%;
+  margin: 20% auto 0;
 }
 
 .icon-img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 3px 10px rgba(61, 46, 92, 0.15));
+  filter: drop-shadow(0 4px 14px rgba(61, 46, 92, 0.18));
 }
 
 .icon-fallback {
@@ -91,45 +90,39 @@ const handleClick = () => {
   opacity: 0.3;
 }
 
-.tray {
+.crystal-pedestal {
   position: absolute;
-  bottom: 12%;
-  width: 78%;
-  height: 28%;
-  background: linear-gradient(165deg, var(--wood-light) 0%, var(--wood) 50%, var(--wood-dark) 100%);
-  border-radius: 30px / 16px;
-  box-shadow:
-    0 3px 10px rgba(61, 46, 92, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  bottom: 4%;
+  left: 4%;
+  width: 92%;
+  height: 50%;
   z-index: 1;
+  background: url('/assets/ui/pedestal.png') no-repeat center / 100% 100%;
 }
 
-.tray::before {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  border-radius: 22px / 10px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.badge {
-  position: absolute;
-  bottom: 6%;
-  padding: 2px 12px;
-  border-radius: 0 0 10px 10px;
-  font-size: 10px;
-  font-weight: 700;
-  color: #fff;
-  z-index: 3;
-  white-space: nowrap;
+.card-info {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0;
+  width: 100%;
 }
 
 .card-name {
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--text-primary);
-  margin-top: 4px;
-  text-align: center;
+}
+
+.badge {
+  position: absolute;
+  right: 0;
+  font-size: 9px;
+  font-weight: 600;
+  color: #fff;
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 </style>

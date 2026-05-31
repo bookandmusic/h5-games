@@ -24,6 +24,9 @@ export function useGameRouteLifecycle() {
       cleanups.set(gameId, new Set())
     }
     cleanups.get(gameId)!.add(fn)
+    return () => {
+      cleanups.get(gameId)?.delete(fn)
+    }
   }
 
   function runGameCleanups(gameId: string) {

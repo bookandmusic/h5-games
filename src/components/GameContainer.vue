@@ -6,12 +6,13 @@ defineProps<{
 </script>
 
 <template>
-  <div class="game-container">
+  <div class="game-container" :class="bgClass">
     <div
       class="game-bg"
       :class="bgClass"
       :style="bgImage ? { backgroundImage: `url(${bgImage})` } : undefined"
     />
+    <slot name="decoration" />
     <div class="game-inner">
       <slot />
     </div>

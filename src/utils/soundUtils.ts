@@ -11,7 +11,7 @@ export function getCtx(): AudioContext {
     masterGain.connect(ctx.destination)
   }
   if (ctx.state === 'suspended') {
-    ctx.resume()
+    ctx.resume().catch(() => {})
   }
   return ctx
 }
@@ -33,13 +33,16 @@ export function releaseCtx() {
   }
 }
 
-function getMaster(): GainNode {
+export function getMaster(): GainNode {
   getCtx()
   return masterGain!
 }
 
 export function setMasterVolume(v: number) {
   masterVolume = v
+  if (masterGain) {
+    masterGain.gain.value = v
+  }
 }
 
 export function destroyCtx() {
@@ -58,16 +61,20 @@ export function osc(
   volume = 1,
   startOffset = 0
 ) {
+  const effectiveVolume = volume * masterVolume
+  if (effectiveVolume === 0) return
+  retainCtx()
   const a = getCtx()
   const o = a.createOscillator()
   const g = a.createGain()
   o.type = type
   o.frequency.value = freq
   g.gain.setValueAtTime(0, a.currentTime + startOffset)
-  g.gain.linearRampToValueAtTime(volume * masterVolume, a.currentTime + startOffset + 0.005)
+  g.gain.linearRampToValueAtTime(effectiveVolume, a.currentTime + startOffset + 0.005)
   g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + startOffset + duration)
   o.connect(g)
   g.connect(getMaster())
   o.start(a.currentTime + startOffset)
   o.stop(a.currentTime + startOffset + duration)
+  o.onended = () => releaseCtx()
 }

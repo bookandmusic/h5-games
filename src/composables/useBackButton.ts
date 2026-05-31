@@ -1,7 +1,9 @@
 import { useRouter } from 'vue-router'
 import { useGameRouteLifecycle } from './useGameRouteLifecycle'
+import { getGameHomeRouteLocation } from '../router/navigation'
+import type { PluginListener } from '@tauri-apps/api/core'
 
-type NavEntry =
+export type NavEntry =
   | { page: 'home' }
   | { page: 'game-home'; gameId: string }
   | { page: 'game-play'; gameId: string }
@@ -9,15 +11,28 @@ type NavEntry =
 const MAX_STACK = 20
 const navStack: NavEntry[] = []
 let initialized = false
+let unlisten: PluginListener | null = null
 
-/**
- * Returns true when two entries are semantically the same page.
- */
 function isSameEntry(a: NavEntry, b: NavEntry): boolean {
   if (a.page !== b.page) return false
   if (a.page === 'home') return true
   type GameEntry = Extract<NavEntry, { gameId: string }>
   return (a as GameEntry).gameId === (b as GameEntry).gameId
+}
+
+export function pushEntry(entry: NavEntry) {
+  if (navStack.length >= MAX_STACK) {
+    navStack.shift()
+  }
+  const prev = navStack.at(-1)
+  if (prev && isSameEntry(prev, entry)) {
+    return
+  }
+  navStack.push(entry)
+}
+
+export function clearStack() {
+  navStack.length = 0
 }
 
 export function useBackButton() {
@@ -32,7 +47,7 @@ export function useBackButton() {
       const { getCurrentWindow } = await import('@tauri-apps/api/window')
       const { runLeaveGuard, runGameCleanups } = useGameRouteLifecycle()
 
-      await onBackButtonPress(async () => {
+      unlisten = await onBackButtonPress(async () => {
         const entry = navStack.pop()
         if (!entry) {
           await getCurrentWindow().destroy()
@@ -55,10 +70,10 @@ export function useBackButton() {
             await getCurrentWindow().destroy()
             break
           case 'game-home':
-            router.replace('/')
+            router.replace({ name: 'home' })
             break
           case 'game-play':
-            router.replace(`/game/${entry.gameId}`)
+            router.replace(getGameHomeRouteLocation(entry.gameId))
             break
         }
       })
@@ -67,20 +82,13 @@ export function useBackButton() {
     }
   }
 
-  function pushEntry(entry: NavEntry) {
-    if (navStack.length >= MAX_STACK) {
-      navStack.shift()
+  function teardown() {
+    if (unlisten) {
+      unlisten.unregister()
+      unlisten = null
     }
-    const prev = navStack.at(-1)
-    if (prev && isSameEntry(prev, entry)) {
-      return
-    }
-    navStack.push(entry)
+    initialized = false
   }
 
-  function clearStack() {
-    navStack.length = 0
-  }
-
-  return { setup, pushEntry, clearStack }
+  return { setup, teardown }
 }

@@ -34,7 +34,11 @@ export const gameStorage = {
     } else {
       const key = `game_state_${gameId}`
       const data = localStorage.getItem(key)
-      return data ? (JSON.parse(data) as T) : null
+      try {
+        return data ? (JSON.parse(data) as T) : null
+      } catch {
+        return null
+      }
     }
   },
 
