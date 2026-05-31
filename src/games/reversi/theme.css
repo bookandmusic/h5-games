@@ -1,0 +1,7 @@
+.felt-bg {
+  background: #1a3a28;
+}
+
+.game-bg.felt-bg {
+  background-color: #1a3a28;
+}
