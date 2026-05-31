@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useGameNavigation } from '../../composables/useGameNavigation'
 import { gameStorage } from '../../stores/gameStorage'
 import {
@@ -13,7 +12,6 @@ import type { AchievementState, GameMode, GameRecords } from './types'
 import GameContainer from '../../components/GameContainer.vue'
 
 const GAME_ID = 'star-catcher'
-const router = useRouter()
 const nav = useGameNavigation(GAME_ID)
 
 const mode = ref<GameMode>('timed')
@@ -50,7 +48,7 @@ function selectMode(nextMode: GameMode) {
 }
 
 function startGame() {
-  router.push({ path: `/game/${GAME_ID}/play`, query: { mode: mode.value } })
+  nav.goToPlay({ mode: mode.value })
 }
 
 function openArchive() {

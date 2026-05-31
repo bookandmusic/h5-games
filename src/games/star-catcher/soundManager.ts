@@ -1,4 +1,13 @@
-import { getCtx, retainCtx, setMasterVolume, destroyCtx, osc } from '../../utils/soundUtils'
+import {
+  getCtx,
+  retainCtx,
+  releaseCtx,
+  setMasterVolume,
+  osc,
+  getMaster,
+} from '../../utils/soundUtils'
+
+const timers: number[] = []
 
 let bgmGain: GainNode | null = null
 let bgmSource: AudioBufferSourceNode | null = null
@@ -21,7 +30,7 @@ function noise(duration: number, volume = 1) {
   g.gain.setValueAtTime(volume * sfxVolume, a.currentTime)
   g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + duration)
   source.connect(g)
-  g.connect(a.destination)
+  g.connect(getMaster())
   source.start()
 }
 
@@ -83,10 +92,10 @@ export const soundManager = {
 
   playGameOver() {
     osc(523, 0.15, 'sine', 0.5)
-    window.setTimeout(() => osc(440, 0.15, 'sine', 0.5), 150)
-    window.setTimeout(() => osc(349, 0.15, 'sine', 0.5), 300)
-    window.setTimeout(() => osc(262, 0.4, 'sine', 0.6), 450)
-    window.setTimeout(() => noise(0.3, 0.2), 600)
+    timers.push(window.setTimeout(() => osc(440, 0.15, 'sine', 0.5), 150))
+    timers.push(window.setTimeout(() => osc(349, 0.15, 'sine', 0.5), 300))
+    timers.push(window.setTimeout(() => osc(262, 0.4, 'sine', 0.6), 450))
+    timers.push(window.setTimeout(() => noise(0.3, 0.2), 600))
   },
 
   playTick() {
@@ -104,14 +113,14 @@ export const soundManager = {
 
   playShield() {
     osc(500, 0.15, 'sine', 0.5)
-    window.setTimeout(() => osc(800, 0.15, 'sine', 0.5), 100)
-    window.setTimeout(() => osc(1200, 0.2, 'sine', 0.6), 200)
+    timers.push(window.setTimeout(() => osc(800, 0.15, 'sine', 0.5), 100))
+    timers.push(window.setTimeout(() => osc(1200, 0.2, 'sine', 0.6), 200))
   },
 
   playShieldBreak() {
     noise(0.15, 0.4)
     osc(2000, 0.05, 'sine', 0.3)
-    window.setTimeout(() => osc(200, 0.1, 'sine', 0.3), 50)
+    timers.push(window.setTimeout(() => osc(200, 0.1, 'sine', 0.3), 50))
   },
 
   async loadBgmFromUrl(url: string) {
@@ -135,7 +144,7 @@ export const soundManager = {
     bgmSource.buffer = bgmBuffer
     bgmSource.loop = true
     bgmSource.connect(bgmGain)
-    bgmGain.connect(a.destination)
+    bgmGain.connect(getMaster())
     bgmSource.start()
     isBgmPlaying = true
   },
@@ -156,6 +165,8 @@ export const soundManager = {
 
   destroy() {
     this.stopBgm()
-    destroyCtx()
+    timers.forEach((id) => window.clearTimeout(id))
+    timers.length = 0
+    releaseCtx()
   },
 }

@@ -13,6 +13,7 @@ import {
 import { soundManager } from './soundManager'
 import { particleSystem } from './particleSystem'
 import * as renderer from './renderer'
+import { formatTime } from '../../utils/timeUtils'
 import {
   gameState,
   initGame,
@@ -68,12 +69,6 @@ let runStats = {
   completed: false,
 }
 
-function formatTime(s: number): string {
-  const m = Math.floor(s / 60)
-  const sec = Math.floor(s % 60)
-  return `${m}:${sec.toString().padStart(2, '0')}`
-}
-
 async function loadBgm() {
   await soundManager.loadBgmFromUrl(bgmUrl)
 }
@@ -124,7 +119,7 @@ function gameLoop(time: number) {
   }
 }
 
-function onCanvasClick(e: MouseEvent) {
+function onCanvasPointerDown(e: PointerEvent) {
   const canvas = canvasRef.value
   if (!canvas) return
   const rect = canvas.getBoundingClientRect()
@@ -132,19 +127,6 @@ function onCanvasClick(e: MouseEvent) {
   const scaleY = canvas.height / rect.height
   const tapX = (e.clientX - rect.left) * scaleX
   const tapY = (e.clientY - rect.top) * scaleY
-  processTap(tapX, tapY)
-}
-
-function onCanvasTouch(e: TouchEvent) {
-  e.preventDefault()
-  const canvas = canvasRef.value
-  if (!canvas) return
-  const rect = canvas.getBoundingClientRect()
-  const scaleX = canvas.width / rect.width
-  const scaleY = canvas.height / rect.height
-  const touch = e.touches[0]
-  const tapX = (touch.clientX - rect.left) * scaleX
-  const tapY = (touch.clientY - rect.top) * scaleY
   processTap(tapX, tapY)
 }
 
@@ -179,6 +161,7 @@ function processTap(tapX: number, tapY: number) {
   }
 
   const color = ITEM_COLORS[result.itemType!]
+  const currentCombo = gameState.combo
   if (
     result.itemType === 'sapphire' ||
     result.itemType === 'amethyst' ||
@@ -188,7 +171,7 @@ function processTap(tapX: number, tapY: number) {
   }
   soundManager.playCollect()
   particleSystem.emitParticles(tapX, tapY, color, 12)
-  particleSystem.addScorePopup(tapX, tapY - 10, result.points, combo.value)
+  particleSystem.addScorePopup(tapX, tapY - 10, result.points, currentCombo)
 
   if (result.itemType === 'lucky') {
     soundManager.playCollectLucky()
@@ -197,22 +180,26 @@ function processTap(tapX: number, tapY: number) {
     soundManager.playCollectRare()
   }
 
-  if (combo.value >= 3 && combo.value <= 4) {
+  if (currentCombo >= 3 && currentCombo <= 4) {
     soundManager.playCombo3()
     particleSystem.emitComboRing(tapX, tapY, 1)
     showComboFlash('x1.5!')
-  } else if (combo.value >= 5 && combo.value <= 7) {
+  } else if (currentCombo >= 5 && currentCombo <= 7) {
     soundManager.playCombo5()
     particleSystem.emitComboRing(tapX, tapY, 2)
     showComboFlash('x2!')
-  } else if (combo.value >= 8 && combo.value <= 12) {
+  } else if (currentCombo >= 8 && currentCombo <= 12) {
     soundManager.playCombo8()
     particleSystem.emitComboRing(tapX, tapY, 3)
     showComboFlash('x3 COMBO!')
-  } else if (combo.value >= 13) {
+  } else if (currentCombo >= 13 && currentCombo <= 19) {
     soundManager.playCombo8()
     particleSystem.emitComboRing(tapX, tapY, 4)
     showComboFlash('x4 SUPER!')
+  } else if (currentCombo >= 20) {
+    soundManager.playCombo8()
+    particleSystem.emitComboRing(tapX, tapY, 5)
+    showComboFlash('x5 MAX!')
   }
 }
 
@@ -378,6 +365,7 @@ onMounted(async () => {
     if (animFrameId) window.cancelAnimationFrame(animFrameId)
     if (countdownTimer) window.clearInterval(countdownTimer)
     soundManager.stopBgm()
+    soundManager.destroy()
   })
 
   const q = router.currentRoute.value.query as Record<string, string>
@@ -386,7 +374,7 @@ onMounted(async () => {
 
   await soundManager.init()
   await renderer.loadImages()
-  loadBgm()
+  await loadBgm()
 
   const canvas = canvasRef.value
   if (canvas) {
@@ -411,8 +399,9 @@ onUnmounted(() => {
   if (countdownTimer) window.clearInterval(countdownTimer)
   if (comboTextTimer) window.clearTimeout(comboTextTimer)
   soundManager.stopBgm()
+  soundManager.destroy()
   if (gameState.phase === 'playing' && !hasSavedResult) {
-    saveGameScore()
+    saveGameScore().catch(() => {})
   }
 })
 </script>
@@ -452,12 +441,7 @@ onUnmounted(() => {
       </div>
 
       <div class="canvas-wrapper">
-        <canvas
-          ref="canvasRef"
-          class="game-canvas"
-          @click="onCanvasClick"
-          @touchstart="onCanvasTouch"
-        />
+        <canvas ref="canvasRef" class="game-canvas" @pointerdown="onCanvasPointerDown" />
         <Transition name="combo-pop">
           <div v-if="showComboText" class="combo-flash">{{ comboText }}</div>
         </Transition>

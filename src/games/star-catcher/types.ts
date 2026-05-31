@@ -1,3 +1,5 @@
+import type { TrailBuffer } from './trailBuffer'
+
 export type ItemType = 'star' | 'sapphire' | 'amethyst' | 'lucky' | 'meteor' | 'shield'
 
 export type GamePhase = 'idle' | 'countdown' | 'playing' | 'ended'
@@ -15,7 +17,7 @@ export interface FallingItem {
   rotationSpeed: number
   glowIntensity: number
   glowPhase: number
-  trail: import('./trailBuffer').TrailBuffer
+  trail: TrailBuffer
   opacity: number
   points: number
 }

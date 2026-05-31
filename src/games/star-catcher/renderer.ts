@@ -20,7 +20,7 @@ export function loadImages(): Promise<void> {
         img.src = `${IMAGE_BASE}${type}.png`
       })
   )
-  return Promise.all(promises).then(() => {})
+  return Promise.all(promises).then(() => undefined)
 }
 
 export function drawItem(ctx: CanvasRenderingContext2D, item: FallingItem, _time: number) {
